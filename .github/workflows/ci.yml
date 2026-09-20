@@ -31,6 +31,9 @@ jobs:
       - name: Strict Lint Check
         run: npm run lint:strict
 
+      - name: Generate Next.js types
+        run: npx next typegen
+
       - name: TypeScript Type Check
         run: npm run type-check
 
