@@ -1,7 +1,7 @@
 /**
  * @module components/legal/LegalWorkspace
  * @description Central client-side legal document workspace container for LegalSaathi.
- * Orchestrates parsing state, error handling, tab navigation, and AI comprehension workflows.
+ * Orchestrates parsing state, error handling, tab navigation, and AI comprehension workflows with persistent session state.
  * @responsibility Coordinates parsed document states, error displays, document preview, summary, and clause analysis tabs.
  * @alignsWith Problem Statement: "Helping users understand their options and potential next steps"
  * @accessibility Fully WCAG 2.1 AA compliant with keyboard-navigable ARIA tabs (role="tablist", role="tab", role="tabpanel").
@@ -10,13 +10,21 @@
 
 'use client';
 
-import React, { useState, useRef, type KeyboardEvent } from 'react';
+import React, { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { AlertCircle, XCircle, FileText, Sparkles, ShieldAlert } from 'lucide-react';
 import { DocumentUploader } from './DocumentUploader';
 import { DocumentPreview } from './DocumentPreview';
 import { SummaryCard } from './SummaryCard';
 import { ClauseList } from './ClauseList';
-import type { ApiError, ParsedDocument } from '@/types/legal';
+import type { ApiError, ParsedDocument, SummaryState, ClausesState } from '@/types/legal';
+import {
+  STORAGE_KEYS,
+  loadFromSession,
+  saveToSession,
+  clearSession,
+  summaryStateSchema,
+  clausesStateSchema,
+} from '@/lib/utils/storage';
 
 /** Available tab views within the active legal workspace. */
 type WorkspaceTab = 'preview' | 'summary' | 'clauses';
@@ -51,7 +59,7 @@ const WORKSPACE_TABS: readonly TabDefinition[] = [
 
 /**
  * Interactive workspace component managing document upload state, API error handling,
- * and accessible tabbed views for preview, summarization, and clause risk analysis.
+ * accessible tabbed views, and persisted summary/clause analysis across tab switches and refreshes.
  *
  * @returns Complete client-side legal document processing workspace.
  * @example
@@ -62,10 +70,52 @@ export function LegalWorkspace(): React.JSX.Element {
   const [parsedDoc, setParsedDoc] = useState<ParsedDocument | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('preview');
   const [error, setError] = useState<ApiError | null>(null);
+
+  // Lifted state with lazy sessionStorage hydration for Summary and Clauses
+  const [summaryState, setSummaryState] = useState<SummaryState>(() => {
+    if (typeof window === 'undefined') {
+      return { text: '', status: 'idle' };
+    }
+    const saved = loadFromSession(STORAGE_KEYS.SUMMARY, summaryStateSchema);
+    if (saved) {
+      const restoredStatus =
+        saved.status === 'streaming' ? (saved.text ? 'done' : 'idle') : saved.status;
+      return { ...saved, status: restoredStatus };
+    }
+    return { text: '', status: 'idle' };
+  });
+
+  const [clausesState, setClausesState] = useState<ClausesState>(() => {
+    if (typeof window === 'undefined') {
+      return { clauses: [], status: 'idle' };
+    }
+    const saved = loadFromSession(STORAGE_KEYS.CLAUSES, clausesStateSchema);
+    if (saved) {
+      const restoredStatus =
+        saved.status === 'loading' ? (saved.clauses.length > 0 ? 'done' : 'idle') : saved.status;
+      return { ...saved, status: restoredStatus };
+    }
+    return { clauses: [], status: 'idle' };
+  });
+
   const tabRefs = useRef<{ [key in WorkspaceTab]?: HTMLButtonElement | null }>({});
 
+  // Persist summary state to sessionStorage whenever updated
+  useEffect(() => {
+    if (summaryState.status !== 'idle' || summaryState.text) {
+      saveToSession(STORAGE_KEYS.SUMMARY, summaryState);
+    }
+  }, [summaryState]);
+
+  // Persist clauses state to sessionStorage whenever updated
+  useEffect(() => {
+    if (clausesState.status !== 'idle' || clausesState.clauses.length > 0) {
+      saveToSession(STORAGE_KEYS.CLAUSES, clausesState);
+    }
+  }, [clausesState]);
+
   /**
-   * Handles successful document parsing and switches to preview.
+   * Handles successful document parsing, switches to preview, and resets child states for the new document.
    *
    * @param doc - Successfully parsed document payload.
    */
@@ -73,6 +123,11 @@ export function LegalWorkspace(): React.JSX.Element {
     setParsedDoc(doc);
     setError(null);
     setActiveTab('preview');
+
+    // Reset lifted states and purge persisted session storage for new file
+    setSummaryState({ text: '', status: 'idle' });
+    setClausesState({ clauses: [], status: 'idle' });
+    clearSession([STORAGE_KEYS.SUMMARY, STORAGE_KEYS.CLAUSES]);
   };
 
   /**
@@ -219,7 +274,12 @@ export function LegalWorkspace(): React.JSX.Element {
             className="focus:outline-hidden"
           >
             {activeTab === 'summary' && (
-              <SummaryCard text={parsedDoc.text} filename={parsedDoc.filename} />
+              <SummaryCard
+                text={parsedDoc.text}
+                filename={parsedDoc.filename}
+                state={summaryState}
+                onStateChange={setSummaryState}
+              />
             )}
           </div>
 
@@ -233,7 +293,12 @@ export function LegalWorkspace(): React.JSX.Element {
             className="focus:outline-hidden"
           >
             {activeTab === 'clauses' && (
-              <ClauseList text={parsedDoc.text} filename={parsedDoc.filename} />
+              <ClauseList
+                text={parsedDoc.text}
+                filename={parsedDoc.filename}
+                state={clausesState}
+                onStateChange={setClausesState}
+              />
             )}
           </div>
         </div>

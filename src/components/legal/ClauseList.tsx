@@ -1,7 +1,7 @@
 /**
  * @module components/legal/ClauseList
- * @description Accessible client component for displaying AI-extracted legal clauses and risk scores in LegalSaathi.
- * @responsibility Manages clause analysis fetching, risk severity grouping, collapsible source quotations, and accessible risk badges.
+ * @description Accessible controlled client component for displaying and persisting AI-extracted legal clauses and risk scores in LegalSaathi.
+ * @responsibility Manages clause analysis fetching, risk severity grouping, collapsible source quotations, and session state persistence.
  * @alignsWith Problem Statement: "Highlighting important clauses, obligations, risks, or inconsistencies"
  * @accessibility Fully WCAG 2.1 AA compliant with semantic article elements, aria-labelledby, and accessible risk badges.
  * @qualityTier production — full JSDoc, strict TypeScript, zero warnings
@@ -20,22 +20,26 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { ERROR_CODES } from '@/config/constants';
-import type { ClauseAnalysisResult, ClauseItem, ClauseRiskLevel } from '@/types/legal';
+import type { ClauseAnalysisResult, ClauseRiskLevel, ClausesState } from '@/types/legal';
 
 /**
- * Props for the ClauseList component.
+ * Props for the ClauseList controlled component.
  */
 export interface ClauseListProps {
   /** Raw text content of the parsed legal document. */
   text: string;
   /** Name of the uploaded document file. */
   filename: string;
+  /** Persisted clause analysis state lifted to parent LegalWorkspace. */
+  state: ClausesState;
+  /** State transition callback to parent LegalWorkspace. */
+  onStateChange: (state: ClausesState) => void;
 }
 
 /**
  * Renders an accessible, high-contrast risk severity badge.
  *
- * @param risk - The risk level: 'low' | 'medium' | 'high'.
+ * @param props - Object containing the clause risk level.
  * @returns Accessible badge element with dedicated aria-label.
  */
 function RiskBadge({ risk }: { risk: ClauseRiskLevel }): React.JSX.Element {
@@ -77,23 +81,31 @@ function RiskBadge({ risk }: { risk: ClauseRiskLevel }): React.JSX.Element {
 }
 
 /**
- * Interactive clause analysis component that extracts key obligations, liabilities, and risk levels.
+ * Interactive controlled clause analysis component that extracts key obligations, liabilities, and risk levels.
+ * Retains state across tab switching and session reloads.
  *
- * @param props - Text and filename of the document to inspect.
+ * @param props - ClauseListProps including text, filename, state, and onStateChange.
  * @returns Accessible ClauseList component element.
  * @example
- *   <ClauseList text={doc.text} filename={doc.filename} />
+ *   <ClauseList text={doc.text} filename={doc.filename} state={clausesState} onStateChange={setClausesState} />
  * @alignsWith Problem Statement: "Highlighting important clauses, obligations, risks, or inconsistencies"
  */
-export function ClauseList({ text, filename }: ClauseListProps): React.JSX.Element {
-  const [clauses, setClauses] = useState<ClauseItem[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [errorCode, setErrorCode] = useState<string | null>(null);
+export function ClauseList({
+  text,
+  filename,
+  state,
+  onStateChange,
+}: ClauseListProps): React.JSX.Element {
   const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
 
   const autoRetriedRef = useRef<boolean>(false);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clauses = state.clauses;
+  const isLoading = state.status === 'loading';
+  const isDone = state.status === 'done';
+  const error = state.error?.error ?? null;
+  const errorCode = state.error?.code ?? null;
 
   const clearCountdown = useCallback(() => {
     if (countdownTimerRef.current) {
@@ -117,14 +129,22 @@ export function ClauseList({ text, filename }: ClauseListProps): React.JSX.Eleme
   const handleAnalyzeClauses = async (isAutoRetry = false) => {
     clearCountdown();
     if (!text || text.trim().length < 10) {
-      setError('Document text is too short to extract clauses.');
-      setErrorCode(ERROR_CODES.INVALID_INPUT);
+      onStateChange({
+        clauses: [],
+        status: 'error',
+        error: {
+          error: 'Document text is too short to extract clauses.',
+          code: ERROR_CODES.INVALID_INPUT,
+          status: 400,
+        },
+      });
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
-    setErrorCode(null);
+    onStateChange({
+      clauses: [],
+      status: 'loading',
+    });
 
     if (!isAutoRetry) {
       autoRetriedRef.current = false;
@@ -141,11 +161,20 @@ export function ClauseList({ text, filename }: ClauseListProps): React.JSX.Eleme
 
       if (!response.ok) {
         if (response.status === 503 || json.code === ERROR_CODES.GEMINI_HIGH_DEMAND) {
-          setErrorCode(ERROR_CODES.GEMINI_HIGH_DEMAND);
-          setError(
+          const finalCode = ERROR_CODES.GEMINI_HIGH_DEMAND;
+          const finalMsg =
             json.error ||
-              'Our AI service is experiencing high demand. Please try again in 30 seconds.'
-          );
+            'Our AI service is experiencing high demand. Please try again in 30 seconds.';
+
+          onStateChange({
+            clauses: [],
+            status: 'error',
+            error: {
+              error: finalMsg,
+              code: finalCode,
+              status: 503,
+            },
+          });
 
           if (!autoRetriedRef.current) {
             autoRetriedRef.current = true;
@@ -168,13 +197,22 @@ export function ClauseList({ text, filename }: ClauseListProps): React.JSX.Eleme
       }
 
       const result = json.data as ClauseAnalysisResult;
-      setClauses(result.clauses || []);
+      onStateChange({
+        clauses: result.clauses || [],
+        status: 'done',
+      });
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : 'Failed to analyze clauses. Please try again.';
-      setError(message);
-    } finally {
-      setIsLoading(false);
+      onStateChange({
+        clauses: [],
+        status: 'error',
+        error: {
+          error: message,
+          code: ERROR_CODES.GEMINI_API_ERROR,
+          status: 500,
+        },
+      });
     }
   };
 
@@ -280,6 +318,26 @@ export function ClauseList({ text, filename }: ClauseListProps): React.JSX.Eleme
 
       {/* Content Area */}
       <div className="p-5">
+        {/* Subtle Banner for Persisted Session Clauses */}
+        {isDone && clauses.length > 0 && !isLoading && (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-indigo-200/70 bg-indigo-50/60 px-3.5 py-2 text-xs text-indigo-900 dark:border-indigo-800/60 dark:bg-indigo-950/40 dark:text-indigo-200">
+            <div className="flex items-center gap-2">
+              <ShieldAlert
+                className="h-3.5 w-3.5 shrink-0 text-indigo-600 dark:text-indigo-400"
+                aria-hidden="true"
+              />
+              <span>Clause analysis from previous session</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleAnalyzeClauses(false)}
+              className="font-semibold text-indigo-700 underline underline-offset-2 hover:text-indigo-900 dark:text-indigo-300 dark:hover:text-indigo-100"
+            >
+              Re-analyze
+            </button>
+          </div>
+        )}
+
         {clauses.length === 0 && !isLoading && !error && (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 py-12 text-center dark:border-zinc-800 dark:bg-zinc-950/30">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">

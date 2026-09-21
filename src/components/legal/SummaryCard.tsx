@@ -1,7 +1,7 @@
 /**
  * @module components/legal/SummaryCard
- * @description Accessible client component for streaming plain-language document summaries in LegalSaathi.
- * @responsibility Manages stream consumption, progressive UI updates, loading states, and error handling.
+ * @description Accessible controlled client component for streaming and persisting plain-language document summaries in LegalSaathi.
+ * @responsibility Manages stream consumption, progressive UI updates, loading states, error handling, and session state persistence.
  * @alignsWith Problem Statement: "Generating summaries, checklists, or other actionable outputs"
  * @accessibility Fully WCAG 2.1 AA compliant with aria-live="polite", role="region", and keyboard navigation.
  * @qualityTier production — full JSDoc, strict TypeScript, zero warnings
@@ -12,38 +12,50 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Sparkles, Copy, Check, AlertCircle, RefreshCw, StopCircle } from 'lucide-react';
 import { ERROR_CODES } from '@/config/constants';
+import type { SummaryState } from '@/types/legal';
 
 /**
- * Props for the SummaryCard component.
+ * Props for the SummaryCard controlled component.
  */
 export interface SummaryCardProps {
   /** Raw text content of the parsed legal document. */
   text: string;
   /** Name of the uploaded document file. */
   filename: string;
+  /** Persisted summary state lifted to parent LegalWorkspace. */
+  state: SummaryState;
+  /** State transition callback to parent LegalWorkspace. */
+  onStateChange: (state: SummaryState) => void;
 }
 
 /**
- * Interactive summary card component that streams AI-generated plain-language summaries in real-time.
- * Features automated 503 high-demand retry countdown and manual retry button.
+ * Interactive controlled summary card component that streams AI-generated plain-language summaries in real-time.
+ * Retains state across tab switching and session reloads.
  *
- * @param props - Text and filename of the document to summarize.
+ * @param props - SummaryCardProps including text, filename, state, and onStateChange.
  * @returns Accessible SummaryCard component element.
  * @example
- *   <SummaryCard text={doc.text} filename={doc.filename} />
+ *   <SummaryCard text={doc.text} filename={doc.filename} state={summaryState} onStateChange={setSummaryState} />
  * @alignsWith Problem Statement: "Generating summaries, checklists, or other actionable outputs"
  */
-export function SummaryCard({ text, filename }: SummaryCardProps): React.JSX.Element {
-  const [summary, setSummary] = useState<string>('');
-  const [isStreaming, setIsStreaming] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [errorCode, setErrorCode] = useState<string | null>(null);
-  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+export function SummaryCard({
+  text,
+  filename,
+  state,
+  onStateChange,
+}: SummaryCardProps): React.JSX.Element {
   const [copied, setCopied] = useState<boolean>(false);
+  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const autoRetriedRef = useRef<boolean>(false);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const summary = state.text;
+  const isStreaming = state.status === 'streaming';
+  const isDone = state.status === 'done';
+  const error = state.error?.error ?? null;
+  const errorCode = state.error?.code ?? null;
 
   const clearCountdown = useCallback(() => {
     if (countdownTimerRef.current) {
@@ -70,16 +82,23 @@ export function SummaryCard({ text, filename }: SummaryCardProps): React.JSX.Ele
   const handleGenerateSummary = async (isAutoRetry = false) => {
     clearCountdown();
     if (!text || text.trim().length < 10) {
-      setError('Document text is too short to generate a summary.');
-      setErrorCode(ERROR_CODES.INVALID_INPUT);
+      onStateChange({
+        text: '',
+        status: 'error',
+        error: {
+          error: 'Document text is too short to generate a summary.',
+          code: ERROR_CODES.INVALID_INPUT,
+          status: 400,
+        },
+      });
       return;
     }
 
-    // Reset previous state
-    setError(null);
-    setErrorCode(null);
-    setSummary('');
-    setIsStreaming(true);
+    // Reset previous state and signal streaming start
+    onStateChange({
+      text: '',
+      status: 'streaming',
+    });
 
     if (!isAutoRetry) {
       autoRetriedRef.current = false;
@@ -108,11 +127,20 @@ export function SummaryCard({ text, filename }: SummaryCardProps): React.JSX.Ele
         }
 
         if (response.status === 503 || code === ERROR_CODES.GEMINI_HIGH_DEMAND) {
-          setErrorCode(ERROR_CODES.GEMINI_HIGH_DEMAND);
-          setError(
+          const finalCode = ERROR_CODES.GEMINI_HIGH_DEMAND;
+          const finalMsg =
             errorMsg ||
-              'Our AI service is experiencing high demand. Please try again in 30 seconds.'
-          );
+            'Our AI service is experiencing high demand. Please try again in 30 seconds.';
+
+          onStateChange({
+            text: '',
+            status: 'error',
+            error: {
+              error: finalMsg,
+              code: finalCode,
+              status: 503,
+            },
+          });
 
           if (!autoRetriedRef.current) {
             autoRetriedRef.current = true;
@@ -148,8 +176,16 @@ export function SummaryCard({ text, filename }: SummaryCardProps): React.JSX.Ele
 
         const chunk = decoder.decode(value, { stream: true });
         accumulatedText += chunk;
-        setSummary(accumulatedText);
+        onStateChange({
+          text: accumulatedText,
+          status: 'streaming',
+        });
       }
+
+      onStateChange({
+        text: accumulatedText,
+        status: 'done',
+      });
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') {
         // User aborted intentionally
@@ -157,9 +193,16 @@ export function SummaryCard({ text, filename }: SummaryCardProps): React.JSX.Ele
       }
       const message =
         err instanceof Error ? err.message : 'Failed to generate summary. Please try again.';
-      setError(message);
+      onStateChange({
+        text: state.text,
+        status: 'error',
+        error: {
+          error: message,
+          code: ERROR_CODES.GEMINI_API_ERROR,
+          status: 500,
+        },
+      });
     } finally {
-      setIsStreaming(false);
       abortControllerRef.current = null;
     }
   };
@@ -170,7 +213,10 @@ export function SummaryCard({ text, filename }: SummaryCardProps): React.JSX.Ele
   const handleStopStreaming = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
-      setIsStreaming(false);
+      onStateChange({
+        text: state.text,
+        status: state.text ? 'done' : 'idle',
+      });
     }
   };
 
@@ -318,6 +364,26 @@ export function SummaryCard({ text, filename }: SummaryCardProps): React.JSX.Ele
 
       {/* Card Body */}
       <div className="p-5">
+        {/* Subtle Banner for Persisted Session Summary */}
+        {isDone && summary && !isStreaming && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-200/70 bg-blue-50/60 px-3.5 py-2 text-xs text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-200">
+            <div className="flex items-center gap-2">
+              <Sparkles
+                className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400"
+                aria-hidden="true"
+              />
+              <span>Summary from previous session</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleGenerateSummary(false)}
+              className="font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
+            >
+              Regenerate
+            </button>
+          </div>
+        )}
+
         {!summary && !isStreaming && !error && (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 py-12 text-center dark:border-zinc-800 dark:bg-zinc-950/30">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">

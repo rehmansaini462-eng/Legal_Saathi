@@ -173,6 +173,36 @@ export interface SummaryResult {
 }
 
 /**
+ * State container for plain-language AI summary generation and persistence.
+ *
+ * @example
+ *   const state: SummaryState = {
+ *     text: 'This contract obligates...',
+ *     status: 'done'
+ *   };
+ */
+export interface SummaryState {
+  text: string;
+  status: 'idle' | 'streaming' | 'done' | 'error';
+  error?: ApiError;
+}
+
+/**
+ * State container for extracted clause risk analysis and persistence.
+ *
+ * @example
+ *   const state: ClausesState = {
+ *     clauses: [{ id: '1', title: 'Liability', ... }],
+ *     status: 'done'
+ *   };
+ */
+export interface ClausesState {
+  clauses: ClauseItem[];
+  status: 'idle' | 'loading' | 'done' | 'error';
+  error?: ApiError;
+}
+
+/**
  * Discriminated union response type for API communication ensuring strict error handling on clients.
  *
  * @example
