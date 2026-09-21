@@ -33,7 +33,7 @@ export const DISCLAIMER_TEXT =
   'This tool provides legal information, not legal advice. Consult a qualified lawyer for your specific situation.' as const;
 
 /** Standard Gemini Generative AI model name optimized for speed, low latency, and structured extraction. */
-export const GEMINI_MODEL = 'gemini-2.0-flash' as const;
+export const GEMINI_MODEL = 'gemini-flash-latest' as const;
 
 /** Timeout threshold in milliseconds for Google Gemini API calls (30 seconds). */
 export const GEMINI_TIMEOUT_MS = 30000 as const;
