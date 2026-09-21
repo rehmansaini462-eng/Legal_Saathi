@@ -8,3 +8,11 @@
 
 export { parseDocument, isApiError } from './parser';
 export { env } from './env';
+export {
+  getGenerativeAIClient,
+  getGeminiModel,
+  generateStream,
+  generateJSON,
+  cleanJsonFence,
+} from './gemini';
+export * from './prompts';

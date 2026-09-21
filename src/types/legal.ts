@@ -75,6 +75,104 @@ export interface ApiSuccess<T> {
 }
 
 /**
+ * Risk severity classification for legal clauses identified by GenAI analysis.
+ *
+ * @example
+ *   const level: ClauseRiskLevel = 'high';
+ */
+export type ClauseRiskLevel = 'low' | 'medium' | 'high';
+
+/**
+ * Individual analyzed legal clause with risk evaluation and plain-language explanation.
+ *
+ * @example
+ *   const clause: ClauseItem = {
+ *     id: 'clause-1',
+ *     title: 'Indemnification & Unlimited Liability',
+ *     originalText: 'The Contractor shall indemnify...',
+ *     plainExplanation: 'You are personally responsible for all damages without limit.',
+ *     riskLevel: 'high',
+ *     riskReason: 'Uncapped financial liability placed entirely on one party.',
+ *     category: 'Liability'
+ *   };
+ */
+export interface ClauseItem {
+  id: string;
+  title: string;
+  originalText: string;
+  plainExplanation: string;
+  riskLevel: ClauseRiskLevel;
+  riskReason: string;
+  category: string;
+}
+
+/**
+ * Structured container for all analyzed legal clauses extracted from a document.
+ *
+ * @example
+ *   const result: ClauseAnalysisResult = {
+ *     clauses: [
+ *       {
+ *         id: 'c-1',
+ *         title: 'Termination for Convenience',
+ *         originalText: 'Either party may terminate...',
+ *         plainExplanation: 'Either side can end the contract with 30 days notice.',
+ *         riskLevel: 'low',
+ *         riskReason: 'Standard mutual termination clause.',
+ *         category: 'Termination'
+ *       }
+ *     ]
+ *   };
+ */
+export interface ClauseAnalysisResult {
+  clauses: ClauseItem[];
+}
+
+/**
+ * Payload expected by the POST /api/summarize endpoint.
+ *
+ * @example
+ *   const req: SummarizeRequest = {
+ *     text: 'This non-disclosure agreement...',
+ *     filename: 'nda.pdf'
+ *   };
+ */
+export interface SummarizeRequest {
+  text: string;
+  filename: string;
+}
+
+/**
+ * Payload expected by the POST /api/clauses endpoint.
+ *
+ * @example
+ *   const req: ClausesRequest = {
+ *     text: 'This consulting agreement...',
+ *     filename: 'agreement.docx'
+ *   };
+ */
+export interface ClausesRequest {
+  text: string;
+  filename: string;
+}
+
+/**
+ * Structured summary representation for legal documents.
+ *
+ * @example
+ *   const summary: SummaryResult = {
+ *     summary: 'This agreement governs non-disclosure between parties.',
+ *     keyPoints: ['2 year confidentiality obligation', 'Excludes publicly known info'],
+ *     documentType: 'Non-Disclosure Agreement (NDA)'
+ *   };
+ */
+export interface SummaryResult {
+  summary: string;
+  keyPoints: string[];
+  documentType: string;
+}
+
+/**
  * Discriminated union response type for API communication ensuring strict error handling on clients.
  *
  * @example

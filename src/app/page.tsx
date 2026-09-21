@@ -21,32 +21,38 @@ interface FeatureCard {
   title: string;
   description: string;
   icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
+  status: 'active' | 'coming-soon';
 }
 
-const UPCOMING_FEATURES: FeatureCard[] = [
+const CAPABILITY_FEATURES: FeatureCard[] = [
   {
     id: 'feature-ai-summary',
-    title: 'AI Summary',
-    description: 'Plain-language summary of complex legal documents.',
+    title: 'AI Plain Summary',
+    description: 'Instant, grounded plain-language summary breaking down rights and obligations.',
     icon: Sparkles,
+    status: 'active',
   },
   {
     id: 'feature-risk-scoring',
     title: 'Clause Risk Scoring',
-    description: 'Highlight important clauses, obligations, and risks.',
+    description:
+      'Automatic risk levels (high, medium, low) on liabilities, penalties, and termination.',
     icon: ShieldAlert,
+    status: 'active',
   },
   {
     id: 'feature-doc-comparison',
     title: 'Document Comparison',
-    description: 'Compare contracts side-by-side.',
+    description: 'Compare multiple contracts side-by-side to highlight deviations and alterations.',
     icon: GitCompare,
+    status: 'coming-soon',
   },
   {
     id: 'feature-qa',
     title: 'Q&A Companion',
-    description: 'Ask questions and get answers grounded in your document.',
+    description: 'Ask questions and get answers grounded strictly in your document text.',
     icon: MessageSquare,
+    status: 'coming-soon',
   },
 ];
 
@@ -120,29 +126,52 @@ export default function HomePage(): React.JSX.Element {
           <LegalWorkspace />
         </section>
 
-        {/* Coming Soon Features Grid Section */}
-        <section aria-labelledby="coming-soon-heading" className="mt-12">
+        {/* AI Capabilities Grid Section */}
+        <section aria-labelledby="capabilities-heading" className="mt-12">
           <div className="border-t border-zinc-200 pt-8 dark:border-zinc-800">
             <h2
-              id="coming-soon-heading"
+              id="capabilities-heading"
               className="text-center text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-100"
             >
-              Upcoming AI Capabilities
+              Legal Intelligence Capabilities
             </h2>
             <p className="mt-1.5 text-center text-sm text-zinc-500 dark:text-zinc-400">
-              Empowering users with end-to-end legal comprehension and risk intelligence
+              Empowering non-lawyers with end-to-end legal comprehension and risk intelligence
             </p>
 
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {UPCOMING_FEATURES.map((feature) => {
+              {CAPABILITY_FEATURES.map((feature) => {
                 const IconComponent = feature.icon;
+                const isActive = feature.status === 'active';
+
                 return (
                   <div
                     key={feature.id}
-                    className="flex flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-xs transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+                    className={`flex flex-col rounded-xl border p-5 shadow-xs transition-shadow hover:shadow-md ${
+                      isActive
+                        ? 'border-blue-200 bg-white dark:border-blue-900/50 dark:bg-zinc-900'
+                        : 'border-zinc-200 bg-zinc-50/50 opacity-80 dark:border-zinc-800 dark:bg-zinc-900/50'
+                    }`}
                   >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
-                      <IconComponent className="h-5 w-5" aria-hidden="true" />
+                    <div className="flex items-center justify-between">
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                          isActive
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                            : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+                        }`}
+                      >
+                        <IconComponent className="h-5 w-5" aria-hidden="true" />
+                      </div>
+                      {isActive ? (
+                        <span className="text-2xs inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="text-2xs inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                          Coming Soon
+                        </span>
+                      )}
                     </div>
                     <h3 className="mt-4 text-base font-semibold text-zinc-900 dark:text-zinc-100">
                       {feature.title}

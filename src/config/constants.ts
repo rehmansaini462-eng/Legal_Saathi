@@ -32,6 +32,12 @@ export const ALLOWED_MIME_TYPES: readonly SupportedMimeType[] = [
 export const DISCLAIMER_TEXT =
   'This tool provides legal information, not legal advice. Consult a qualified lawyer for your specific situation.' as const;
 
+/** Standard Gemini Generative AI model name optimized for speed, low latency, and structured extraction. */
+export const GEMINI_MODEL = 'gemini-2.0-flash' as const;
+
+/** Timeout threshold in milliseconds for Google Gemini API calls (30 seconds). */
+export const GEMINI_TIMEOUT_MS = 30000 as const;
+
 /** Standardized error codes map ensuring consistent client-server error identification and UI error boundary mapping. */
 export const ERROR_CODES = {
   INVALID_MIME: 'INVALID_MIME',
@@ -40,6 +46,10 @@ export const ERROR_CODES = {
   PARSE_FAILED: 'PARSE_FAILED',
   NO_FILE: 'NO_FILE',
   SCANNED_PDF: 'SCANNED_PDF',
+  INVALID_INPUT: 'INVALID_INPUT',
+  GEMINI_API_ERROR: 'GEMINI_API_ERROR',
+  GEMINI_PARSE_ERROR: 'GEMINI_PARSE_ERROR',
+  GEMINI_TIMEOUT: 'GEMINI_TIMEOUT',
 } as const;
 
 /** Union type representing all valid application error code literals. */
