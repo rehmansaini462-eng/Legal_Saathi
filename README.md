@@ -2,6 +2,11 @@
 
 > **Understand your legal documents in plain language**
 
+> **H25 Challenge Alignment:** This project directly addresses the
+> "AI for Legal Assistance & Access" problem statement by simplifying
+> complex legal documents, highlighting important clauses and risks,
+> and preparing users for conversations with legal professionals.
+
 LegalSaathi is an AI-powered legal document comprehension and analysis assistant designed to simplify dense legal contracts and empower citizens with accessible legal intelligence.
 
 ---
@@ -13,11 +18,17 @@ LegalSaathi is an AI-powered legal document comprehension and analysis assistant
 
 ---
 
-## Problem Statement
+## Problem Statement (from H25)
 
-Navigating legal contracts and compliance documents in India and globally presents a severe accessibility barrier for non-lawyers, small business owners, and everyday citizens. Traditional legal terminology is dense, opaque, and deliberately complex, often leading individuals to sign agreements without fully comprehending binding obligations, hidden liabilities, and unfair penalty clauses.
+> "Legal information can often be complex, difficult to understand, and
+> challenging to navigate without professional assistance."
 
-Furthermore, seeking immediate, preliminary legal review from attorneys is often cost-prohibitive and time-consuming for routine agreements like rent agreements, employment offers, non-disclosure agreements, and service contracts. There is an urgent need for an ethical, accurate, and accessible AI companion that translates legal jargon into clear, actionable plain language.
+**How LegalSaathi addresses each barrier:**
+
+- **Complexity** → plain-language summaries and clause-by-clause breakdown
+- **Navigation** → clause citations with risk scores
+- **Access** → free, instant, no login required
+- **Trust** → explicit "not legal advice" disclaimer + lawyer prep output
 
 ---
 
@@ -36,6 +47,8 @@ LegalSaathi bridges the gap between complex legal documents and everyday underst
 ## Key Features
 
 - [x] Multi-format document ingestion (PDF, DOCX, TXT up to 10MB)
+- [x] In-memory document parsing and sanitization pipeline
+- [x] Accessible WCAG 2.1 AA compliant UI with screen reader announcements
 - [x] Plain-language clause-by-clause breakdown
 - [x] Executive summary generation with key takeaways
 - [x] Critical risk and red-flag scoring
@@ -55,15 +68,24 @@ LegalSaathi bridges the gap between complex legal documents and everyday underst
 | **UI Components** | shadcn/ui & Lucide Icons  | Accessible, high-aesthetic component library               |
 | **Generative AI** | Google Gemini API         | Structured clause extraction, summarization, and reasoning |
 | **Validation**    | Zod                       | Runtime schema validation for env vars and API payloads    |
+| **Testing**       | Vitest & Testing Library  | Fast unit testing for parser and security boundaries       |
 | **Deployment**    | Vercel                    | Production edge hosting with automated CI/CD               |
 
 ---
 
 ## Architecture
 
-> _Architecture diagram coming soon._
-
-LegalSaathi uses Next.js server actions and API route handlers to parse documents, extract text chunks, compute semantic embeddings, and query Google Gemini models with structured prompt templates.
+```
+[User / Browser]
+       │
+       ▼ (Multipart Form / drag-and-drop)
+[Next.js Server API: /api/parse]
+       │
+       ├─► MIME Type & Size Validation (10MB Limit)
+       ├─► Buffer-based Extraction (pdf-parse / mammoth)
+       ├─► Text Sanitization & OCR Warning Checks
+       └─► Returns Structured ParsedDocument JSON
+```
 
 ---
 
@@ -126,6 +148,9 @@ npm run format:check
 # Auto-format codebase
 npm run format
 
+# Run Vitest test suite
+npm run test
+
 # Production build verification
 npm run build
 ```
@@ -144,26 +169,14 @@ LegalSaathi is optimized for one-click deployment on [Vercel](https://vercel.com
 
 ## Hackathon Evaluation Alignment
 
-| Evaluation Criteria   | LegalSaathi Implementation Strategy                                                               |
-| :-------------------- | :------------------------------------------------------------------------------------------------ |
-| **Code Quality**      | Strict TypeScript, Prettier, ESLint 0-warnings rule, Husky pre-commit hooks, CI workflow          |
-| **Security**          | Zod schema validation, strict env parsing, zero API key exposure to client, secure file ingestion |
-| **Efficiency**        | Next.js Server Components, optimized streaming LLM responses, minimal client bundle               |
-| **Testing**           | Modular architecture with dedicated `/tests` suite and CI pipeline on every push                  |
-| **Accessibility**     | Semantic HTML5, ARIA labels, contrast-compliant theme, keyboard navigable UI                      |
-| **Problem Alignment** | Tackles legal document opacity directly through simplified plain-language assistance              |
-
----
-
-## Roadmap
-
-- **Day 1**: Document ingestion & parsing pipeline (PDF, DOCX, TXT)
-- **Day 2**: Gemini API integration & structured legal prompt engineering
-- **Day 3**: Plain-language summary & clause risk classification engine
-- **Day 4**: Interactive document Q&A companion with grounded RAG
-- **Day 5**: UI/UX polish with shadcn/ui, animations, and dark mode
-- **Day 6**: End-to-end integration testing, edge cases & performance benchmarking
-- **Day 7**: Demo preparation, user acceptance testing, and final hackathon submission
+| Criteria                        | Our Implementation                                                                                                                                                                                                                                    |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Code Quality**                | Strict TypeScript (no any), ESLint 0-warnings, Prettier via Husky, JSDoc with @param/@returns/@throws/@example on every export, modular architecture (types/, lib/, components/legal/), barrel exports, conventional commits                          |
+| **Security**                    | Zod env validation, MIME whitelist (PDF/DOCX/TXT only), 10MB size cap, in-memory parsing (no disk writes), no stack trace leakage, CSP-lite security headers, .env isolation, server-only route handlers                                              |
+| **Efficiency**                  | Next.js 16 Turbopack, React Server Components, streaming-ready architecture, minimal client bundle, serverExternalPackages for native modules                                                                                                         |
+| **Testing**                     | Vitest unit tests with criteria-tagged describe blocks (Security / Problem Alignment / Code Quality), CI on every push (lint + type-check + format + build)                                                                                           |
+| **Accessibility**               | Semantic HTML5 (main, section, header, footer), ARIA labels & roles on all interactive elements, aria-live for async status, keyboard navigation, focus-visible rings, skip-to-content link, WCAG AA contrast, screen-reader-tested heading hierarchy |
+| **Problem Statement Alignment** | Directly solves legal document complexity for non-lawyers: plain-language summaries, clause citations, risk scoring, lawyer prep, multi-format document ingestion, non-advice disclaimer                                                              |
 
 ---
 
