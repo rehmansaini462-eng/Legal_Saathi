@@ -11,6 +11,8 @@
     "format:check": "prettier --check .",
     "type-check": "tsc --noEmit",
     "lint:strict": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepare": "husky || true"
   },
   "lint-staged": {
@@ -23,23 +25,34 @@
     ]
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "lucide-react": "^1.47.0",
+    "mammoth": "^1.12.3",
     "next": "16.3.5",
+    "pdf-parse": "^1.1.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-dropzone": "^20.1.2",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^22.20.4",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.1.1",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^30.1.0",
     "lint-staged": "^17.5.1",
     "prettier": "^3.9.8",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.1"
   }
 }
