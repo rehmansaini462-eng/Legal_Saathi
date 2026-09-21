@@ -15,3 +15,12 @@ export {
   type ClausesPromptInput,
   type ClausesResponseData,
 } from './clauses';
+export { buildAskPrompt, AskResponseSchema, type AskPromptInput, type AskResponse } from './ask';
+export {
+  buildComparePrompt,
+  ComparisonResponseSchema,
+  ComparisonRowSchema,
+  type ComparePromptDocInput,
+  type ComparisonResponse,
+  type ComparisonRow,
+} from './compare';

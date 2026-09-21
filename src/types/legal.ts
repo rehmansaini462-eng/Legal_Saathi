@@ -7,6 +7,8 @@
  * @security Prevents client-side type injection and guarantees structured error boundaries.
  */
 
+import { z } from 'zod';
+
 /**
  * Whitelist of supported MIME types for input document ingestion.
  *
@@ -201,6 +203,231 @@ export interface ClausesState {
   status: 'idle' | 'loading' | 'done' | 'error';
   error?: ApiError;
 }
+
+/**
+ * Grounded citation linking an answer directly to quoted legal text and clause location.
+ *
+ * @example
+ *   const citation: Citation = {
+ *     quote: 'The Contractor shall deliver the deliverables within 30 days.',
+ *     location: 'Clause 3.1 (Delivery Timeline)'
+ *   };
+ */
+export interface Citation {
+  quote: string;
+  location: string;
+}
+
+/**
+ * Confidence level of the Q&A model based on whether the fact was explicitly stated or inferred.
+ */
+export type QuestionConfidence = 'high' | 'medium' | 'low';
+
+/**
+ * Structured response payload for document Q&A queries.
+ *
+ * @example
+ *   const res: AskResponse = {
+ *     answer: 'The contract can be terminated by either party with 30 days notice.',
+ *     citations: [{ quote: 'Either party may terminate...', location: 'Clause 9 (Termination)' }],
+ *     confidence: 'high',
+ *     notFoundInDocument: false
+ *   };
+ */
+export interface AskResponse {
+  answer: string;
+  citations: Citation[];
+  confidence: QuestionConfidence;
+  notFoundInDocument: boolean;
+}
+
+/**
+ * Designation of which party benefits from a specific contractual difference or term.
+ */
+export type BenefitsParty = 'A' | 'B' | 'both' | 'neither';
+
+/**
+ * Row representing comparison between two legal documents on a specific topic.
+ *
+ * @example
+ *   const row: ComparisonRow = {
+ *     topic: 'Liability Cap',
+ *     docA: 'Capped at $50,000',
+ *     docB: 'Uncapped unlimited liability',
+ *     difference: 'Doc B exposes contractor to unlimited financial risk.',
+ *     benefitsParty: 'A'
+ *   };
+ */
+export interface ComparisonRow {
+  topic: string;
+  docA: string;
+  docB: string;
+  difference: string;
+  benefitsParty: BenefitsParty;
+}
+
+/**
+ * Structured response payload containing contract comparison matrix and executive summary.
+ *
+ * @example
+ *   const comparison: ComparisonResponse = {
+ *     rows: [
+ *       {
+ *         topic: 'Payment Terms',
+ *         docA: 'Net 30',
+ *         docB: 'Net 60',
+ *         difference: 'Doc A requires payment 30 days sooner.',
+ *         benefitsParty: 'A'
+ *       }
+ *     ],
+ *     summary: 'Doc A offers substantially more favorable payment and termination terms.'
+ *   };
+ */
+export interface ComparisonResponse {
+  rows: ComparisonRow[];
+  summary: string;
+}
+
+/**
+ * Payload expected by the POST /api/ask endpoint.
+ *
+ * @example
+ *   const req: AskRequest = {
+ *     text: 'Agreement between...',
+ *     filename: 'nda.pdf',
+ *     question: 'What is the duration of confidentiality?'
+ *   };
+ */
+export interface AskRequest {
+  text: string;
+  filename: string;
+  question: string;
+}
+
+/**
+ * Payload expected by the POST /api/compare endpoint.
+ *
+ * @example
+ *   const req: CompareRequest = {
+ *     docA: { text: 'Vendor Agreement v1...', filename: 'v1.pdf' },
+ *     docB: { text: 'Vendor Agreement v2...', filename: 'v2.pdf' }
+ *   };
+ */
+export interface CompareRequest {
+  docA: {
+    text: string;
+    filename: string;
+  };
+  docB: {
+    text: string;
+    filename: string;
+  };
+}
+
+/**
+ * State container for document Q&A history and UI interaction state.
+ *
+ * @example
+ *   const state: AskState = {
+ *     history: [{ question: 'What is the penalty?', response: null }],
+ *     status: 'loading'
+ *   };
+ */
+export interface AskState {
+  history: Array<{
+    question: string;
+    response: AskResponse | null;
+    error?: ApiError;
+  }>;
+  status: 'idle' | 'loading' | 'done' | 'error';
+}
+
+/**
+ * State container for document comparison results and UI interaction state.
+ *
+ * @example
+ *   const state: CompareState = {
+ *     comparison: null,
+ *     status: 'idle'
+ *   };
+ */
+export interface CompareState {
+  comparison: ComparisonResponse | null;
+  status: 'idle' | 'loading' | 'done' | 'error';
+  error?: ApiError;
+}
+
+/**
+ * Zod schema for Citation structure validation.
+ */
+export const CitationSchema = z.object({
+  quote: z.string().describe('Direct verbatim quotation from the legal document text'),
+  location: z.string().describe('Clause name, section heading, or paragraph location reference'),
+});
+
+/**
+ * Zod schema for AskResponse structure validation.
+ */
+export const AskResponseSchema = z.object({
+  answer: z.string().describe('Plain-language grounded answer to the user question'),
+  citations: z
+    .array(CitationSchema)
+    .describe('List of exact quoted citations supporting the answer'),
+  confidence: z.enum(['high', 'medium', 'low']).describe('Confidence assessment score'),
+  notFoundInDocument: z
+    .boolean()
+    .describe('Flag set to true if the question cannot be answered from the provided text'),
+});
+
+/**
+ * Zod schema for ComparisonRow structure validation.
+ */
+export const ComparisonRowSchema = z.object({
+  topic: z.string().describe('Legal topic being compared, e.g. Payment, Liability, Termination'),
+  docA: z.string().describe('Summary of terms in Document A for this topic'),
+  docB: z.string().describe('Summary of terms in Document B for this topic'),
+  difference: z.string().describe('Plain-language explanation of how the two documents differ'),
+  benefitsParty: z
+    .enum(['A', 'B', 'both', 'neither'])
+    .describe('Which party or document has the more advantageous position'),
+});
+
+/**
+ * Zod schema for ComparisonResponse structure validation.
+ */
+export const ComparisonResponseSchema = z.object({
+  rows: z.array(ComparisonRowSchema).describe('Matrix of topic-by-topic comparison rows'),
+  summary: z.string().describe('High-level executive comparison summary comparing both documents'),
+});
+
+/**
+ * Zod schema for validating incoming AskRequest payloads.
+ */
+export const AskRequestSchema = z.object({
+  text: z.string().trim().min(10, { message: 'Document text must be at least 10 characters.' }),
+  filename: z.string().optional().default('document.txt'),
+  question: z
+    .string()
+    .trim()
+    .min(3, { message: 'Question must be at least 3 characters long.' })
+    .max(500, { message: 'Question must not exceed 500 characters.' }),
+});
+
+/**
+ * Zod schema for validating individual document objects in comparison requests.
+ */
+const compareDocItemSchema = z.object({
+  text: z.string().trim().min(10, { message: 'Document text must be at least 10 characters.' }),
+  filename: z.string().optional().default('document.txt'),
+});
+
+/**
+ * Zod schema for validating incoming CompareRequest payloads.
+ */
+export const CompareRequestSchema = z.object({
+  docA: compareDocItemSchema,
+  docB: compareDocItemSchema,
+});
 
 /**
  * Discriminated union response type for API communication ensuring strict error handling on clients.

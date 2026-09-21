@@ -167,16 +167,25 @@ LegalSaathi is optimized for one-click deployment on [Vercel](https://vercel.com
 
 ---
 
+## Roadmap
+
+- [x] **Day 1: Production Foundation & Parsing Pipeline** — Ultra-strict TypeScript, in-memory PDF/DOCX/TXT parsing, WCAG 2.1 AA UI workspace, CI/CD pipeline, and security headers.
+- [x] **Day 2: Plain-Language AI Summarization & Clause Risk Engine** — Streaming plain-language summary with executive takeaways, clause risk scoring (high/medium/low), and multi-model retry/fallback chain.
+- [x] **Day 3: Grounded Q&A with Citations & Contract Comparison Matrix** — Interactive document Q&A with exact quoted citations, side-by-side contract comparison matrix, and party favorability analysis.
+- [ ] **Day 4: Lawyer Discussion Prep & Exportable PDF Reports** — Structured questions for legal counsel, red-flag checklists, and accessible export summaries.
+
+---
+
 ## Hackathon Evaluation Alignment
 
 | Criteria                        | Our Implementation                                                                                                                                                                                                                                    |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Code Quality**                | Strict TypeScript (no any), ESLint 0-warnings, Prettier via Husky, JSDoc with @param/@returns/@throws/@example on every export, modular architecture (types/, lib/, components/legal/), barrel exports, conventional commits                          |
-| **Security**                    | Zod env validation, MIME whitelist (PDF/DOCX/TXT only), 10MB size cap, in-memory parsing (no disk writes), no stack trace leakage, CSP-lite security headers, .env isolation, server-only route handlers                                              |
+| **Security**                    | Zod env validation, MIME whitelist (PDF/DOCX/TXT only), 10MB size cap, 100K char comparison limit, in-memory parsing (no disk writes), no stack trace leakage, CSP-lite security headers, .env isolation, server-only route handlers                  |
 | **Efficiency**                  | Next.js 16 Turbopack, React Server Components, streaming-ready architecture, minimal client bundle, serverExternalPackages for native modules                                                                                                         |
 | **Testing**                     | Vitest unit tests with criteria-tagged describe blocks (Security / Problem Alignment / Code Quality), CI on every push (lint + type-check + format + build)                                                                                           |
 | **Accessibility**               | Semantic HTML5 (main, section, header, footer), ARIA labels & roles on all interactive elements, aria-live for async status, keyboard navigation, focus-visible rings, skip-to-content link, WCAG AA contrast, screen-reader-tested heading hierarchy |
-| **Problem Statement Alignment** | Directly solves legal document complexity for non-lawyers: plain-language summaries, clause citations, risk scoring, lawyer prep, multi-format document ingestion, non-advice disclaimer                                                              |
+| **Problem Statement Alignment** | Directly implements 3 of the challenge's potential use cases: summarizing complex documents, answering questions with clause citations, and comparing contracts side-by-side. Includes non-advice disclaimer and grounded guardrails.                 |
 
 ---
 

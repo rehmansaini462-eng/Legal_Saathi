@@ -1,22 +1,41 @@
 /**
  * @module components/legal/LegalWorkspace
  * @description Central client-side legal document workspace container for LegalSaathi.
- * Orchestrates parsing state, error handling, tab navigation, and AI comprehension workflows with persistent session state.
- * @responsibility Coordinates parsed document states, error displays, document preview, summary, and clause analysis tabs.
+ * Orchestrates document parsing, mode toggles (Single vs Compare), error handling, accessible tab navigation,
+ * and AI comprehension workflows (Summary, Clause Risk, Grounded Q&A, and Document Comparison) with persistent session state.
+ * @responsibility Coordinates parsed document states, error displays, document previews, summary, clause analysis, Q&A, and comparison matrix tabs.
  * @alignsWith Problem Statement: "Helping users understand their options and potential next steps"
- * @accessibility Fully WCAG 2.1 AA compliant with keyboard-navigable ARIA tabs (role="tablist", role="tab", role="tabpanel").
+ * @accessibility Fully WCAG 2.1 AA compliant with keyboard-navigable ARIA tabs (role="tablist", role="tab", role="tabpanel") and screen-reader announcements.
  * @qualityTier production — full JSDoc, strict TypeScript, zero warnings
  */
 
 'use client';
 
 import React, { useState, useRef, useEffect, type KeyboardEvent } from 'react';
-import { AlertCircle, XCircle, FileText, Sparkles, ShieldAlert } from 'lucide-react';
+import {
+  AlertCircle,
+  XCircle,
+  FileText,
+  Sparkles,
+  ShieldAlert,
+  MessageSquare,
+  GitCompare,
+  Layers,
+} from 'lucide-react';
 import { DocumentUploader } from './DocumentUploader';
 import { DocumentPreview } from './DocumentPreview';
 import { SummaryCard } from './SummaryCard';
 import { ClauseList } from './ClauseList';
-import type { ApiError, ParsedDocument, SummaryState, ClausesState } from '@/types/legal';
+import { AskQuestion } from './AskQuestion';
+import { CompareDocuments } from './CompareDocuments';
+import type {
+  ApiError,
+  ParsedDocument,
+  SummaryState,
+  ClausesState,
+  AskState,
+  CompareState,
+} from '@/types/legal';
 import {
   STORAGE_KEYS,
   loadFromSession,
@@ -24,19 +43,34 @@ import {
   clearSession,
   summaryStateSchema,
   clausesStateSchema,
+  askStateSchema,
+  compareStateSchema,
 } from '@/lib/utils/storage';
 
-/** Available tab views within the active legal workspace. */
-type WorkspaceTab = 'preview' | 'summary' | 'clauses';
+/** Available workspace modes. */
+type WorkspaceMode = 'single' | 'compare';
 
-interface TabDefinition {
-  id: WorkspaceTab;
+/** Available tab views in Single Document mode. */
+type SingleWorkspaceTab = 'preview' | 'summary' | 'clauses' | 'ask';
+
+/** Available tab views in Compare mode. */
+type CompareWorkspaceTab = 'previewA' | 'previewB' | 'comparison';
+
+interface SingleTabDefinition {
+  id: SingleWorkspaceTab;
   label: string;
   icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
   description: string;
 }
 
-const WORKSPACE_TABS: readonly TabDefinition[] = [
+interface CompareTabDefinition {
+  id: CompareWorkspaceTab;
+  label: string;
+  icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
+  description: string;
+}
+
+const SINGLE_WORKSPACE_TABS: readonly SingleTabDefinition[] = [
   {
     id: 'preview',
     label: 'Document Preview',
@@ -55,11 +89,38 @@ const WORKSPACE_TABS: readonly TabDefinition[] = [
     icon: ShieldAlert,
     description: 'Categorized clauses, liabilities, and risk levels',
   },
+  {
+    id: 'ask',
+    label: 'Ask Questions',
+    icon: MessageSquare,
+    description: 'Grounded Q&A with exact source text citations',
+  },
+] as const;
+
+const COMPARE_WORKSPACE_TABS: readonly CompareTabDefinition[] = [
+  {
+    id: 'comparison',
+    label: 'Comparison Matrix',
+    icon: GitCompare,
+    description: 'Side-by-side contract difference matrix and party benefits',
+  },
+  {
+    id: 'previewA',
+    label: 'Preview Doc A',
+    icon: FileText,
+    description: 'Extracted text and metadata for Document A',
+  },
+  {
+    id: 'previewB',
+    label: 'Preview Doc B',
+    icon: FileText,
+    description: 'Extracted text and metadata for Document B',
+  },
 ] as const;
 
 /**
- * Interactive workspace component managing document upload state, API error handling,
- * accessible tabbed views, and persisted summary/clause analysis across tab switches and refreshes.
+ * Interactive workspace component managing document upload state, mode toggling, API error handling,
+ * accessible tabbed views, and persisted analysis across tab switches and refreshes.
  *
  * @returns Complete client-side legal document processing workspace.
  * @example
@@ -67,11 +128,21 @@ const WORKSPACE_TABS: readonly TabDefinition[] = [
  * @alignsWith Problem Statement: "Helping users understand their options and potential next steps"
  */
 export function LegalWorkspace(): React.JSX.Element {
+  // Mode selection state: 'single' document vs 'compare' dual document mode
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('single');
+
+  // Single document state
   const [parsedDoc, setParsedDoc] = useState<ParsedDocument | null>(null);
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('preview');
+  const [activeSingleTab, setActiveSingleTab] = useState<SingleWorkspaceTab>('preview');
+
+  // Compare mode states
+  const [parsedDocA, setParsedDocA] = useState<ParsedDocument | null>(null);
+  const [parsedDocB, setParsedDocB] = useState<ParsedDocument | null>(null);
+  const [activeCompareTab, setActiveCompareTab] = useState<CompareWorkspaceTab>('comparison');
+
   const [error, setError] = useState<ApiError | null>(null);
 
-  // Lifted state with lazy sessionStorage hydration for Summary and Clauses
+  // Lifted state with lazy sessionStorage hydration for Summary
   const [summaryState, setSummaryState] = useState<SummaryState>(() => {
     if (typeof window === 'undefined') {
       return { text: '', status: 'idle' };
@@ -85,6 +156,7 @@ export function LegalWorkspace(): React.JSX.Element {
     return { text: '', status: 'idle' };
   });
 
+  // Lifted state with lazy sessionStorage hydration for Clauses
   const [clausesState, setClausesState] = useState<ClausesState>(() => {
     if (typeof window === 'undefined') {
       return { clauses: [], status: 'idle' };
@@ -98,36 +170,99 @@ export function LegalWorkspace(): React.JSX.Element {
     return { clauses: [], status: 'idle' };
   });
 
-  const tabRefs = useRef<{ [key in WorkspaceTab]?: HTMLButtonElement | null }>({});
+  // Lifted state with lazy sessionStorage hydration for Q&A
+  const [askState, setAskState] = useState<AskState>(() => {
+    if (typeof window === 'undefined') {
+      return { history: [], status: 'idle' };
+    }
+    const saved = loadFromSession(STORAGE_KEYS.ASK, askStateSchema);
+    if (saved) {
+      const restoredStatus = saved.status === 'loading' ? 'idle' : saved.status;
+      return { ...saved, status: restoredStatus };
+    }
+    return { history: [], status: 'idle' };
+  });
 
-  // Persist summary state to sessionStorage whenever updated
+  // Lifted state with lazy sessionStorage hydration for Comparison
+  const [compareState, setCompareState] = useState<CompareState>(() => {
+    if (typeof window === 'undefined') {
+      return { comparison: null, status: 'idle' };
+    }
+    const saved = loadFromSession(STORAGE_KEYS.COMPARE, compareStateSchema);
+    if (saved) {
+      const restoredStatus =
+        saved.status === 'loading' ? (saved.comparison ? 'done' : 'idle') : saved.status;
+      return { ...saved, status: restoredStatus };
+    }
+    return { comparison: null, status: 'idle' };
+  });
+
+  const singleTabRefs = useRef<{ [key in SingleWorkspaceTab]?: HTMLButtonElement | null }>({});
+  const compareTabRefs = useRef<{ [key in CompareWorkspaceTab]?: HTMLButtonElement | null }>({});
+
+  // Persist summary state to sessionStorage
   useEffect(() => {
     if (summaryState.status !== 'idle' || summaryState.text) {
       saveToSession(STORAGE_KEYS.SUMMARY, summaryState);
     }
   }, [summaryState]);
 
-  // Persist clauses state to sessionStorage whenever updated
+  // Persist clauses state to sessionStorage
   useEffect(() => {
     if (clausesState.status !== 'idle' || clausesState.clauses.length > 0) {
       saveToSession(STORAGE_KEYS.CLAUSES, clausesState);
     }
   }, [clausesState]);
 
+  // Persist ask state to sessionStorage
+  useEffect(() => {
+    if (askState.status !== 'idle' || askState.history.length > 0) {
+      saveToSession(STORAGE_KEYS.ASK, askState);
+    }
+  }, [askState]);
+
+  // Persist compare state to sessionStorage
+  useEffect(() => {
+    if (compareState.status !== 'idle' || compareState.comparison !== null) {
+      saveToSession(STORAGE_KEYS.COMPARE, compareState);
+    }
+  }, [compareState]);
+
   /**
-   * Handles successful document parsing, switches to preview, and resets child states for the new document.
+   * Handles successful single document parsing.
    *
    * @param doc - Successfully parsed document payload.
    */
-  const handleParsed = (doc: ParsedDocument) => {
+  const handleSingleParsed = (doc: ParsedDocument) => {
     setParsedDoc(doc);
     setError(null);
-    setActiveTab('preview');
+    setActiveSingleTab('preview');
 
     // Reset lifted states and purge persisted session storage for new file
     setSummaryState({ text: '', status: 'idle' });
     setClausesState({ clauses: [], status: 'idle' });
-    clearSession([STORAGE_KEYS.SUMMARY, STORAGE_KEYS.CLAUSES]);
+    setAskState({ history: [], status: 'idle' });
+    clearSession([STORAGE_KEYS.SUMMARY, STORAGE_KEYS.CLAUSES, STORAGE_KEYS.ASK]);
+  };
+
+  /**
+   * Handles successful parsing of Document A in Compare Mode.
+   */
+  const handleDocAParsed = (doc: ParsedDocument) => {
+    setParsedDocA(doc);
+    setError(null);
+    setCompareState({ comparison: null, status: 'idle' });
+    clearSession([STORAGE_KEYS.COMPARE]);
+  };
+
+  /**
+   * Handles successful parsing of Document B in Compare Mode.
+   */
+  const handleDocBParsed = (doc: ParsedDocument) => {
+    setParsedDocB(doc);
+    setError(null);
+    setCompareState({ comparison: null, status: 'idle' });
+    clearSession([STORAGE_KEYS.COMPARE]);
   };
 
   /**
@@ -137,7 +272,6 @@ export function LegalWorkspace(): React.JSX.Element {
    */
   const handleError = (err: ApiError) => {
     setError(err);
-    setParsedDoc(null);
   };
 
   /**
@@ -148,13 +282,13 @@ export function LegalWorkspace(): React.JSX.Element {
   };
 
   /**
-   * Handles accessible arrow-key navigation between workspace tabs.
-   *
-   * @param event - Keyboard event captured on tab buttons.
-   * @param currentIndex - Zero-based index of the currently focused tab.
+   * Handles accessible arrow-key navigation between Single Mode tabs.
    */
-  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
-    const totalTabs = WORKSPACE_TABS.length;
+  const handleSingleTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number
+  ) => {
+    const totalTabs = SINGLE_WORKSPACE_TABS.length;
     let nextIndex: number | null = null;
 
     if (event.key === 'ArrowRight') {
@@ -169,20 +303,92 @@ export function LegalWorkspace(): React.JSX.Element {
 
     if (nextIndex !== null) {
       event.preventDefault();
-      const nextTab = WORKSPACE_TABS[nextIndex];
+      const nextTab = SINGLE_WORKSPACE_TABS[nextIndex];
       if (nextTab) {
-        setActiveTab(nextTab.id);
-        tabRefs.current[nextTab.id]?.focus();
+        setActiveSingleTab(nextTab.id);
+        singleTabRefs.current[nextTab.id]?.focus();
+      }
+    }
+  };
+
+  /**
+   * Handles accessible arrow-key navigation between Compare Mode tabs.
+   */
+  const handleCompareTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number
+  ) => {
+    const totalTabs = COMPARE_WORKSPACE_TABS.length;
+    let nextIndex: number | null = null;
+
+    if (event.key === 'ArrowRight') {
+      nextIndex = (currentIndex + 1) % totalTabs;
+    } else if (event.key === 'ArrowLeft') {
+      nextIndex = (currentIndex - 1 + totalTabs) % totalTabs;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = totalTabs - 1;
+    }
+
+    if (nextIndex !== null) {
+      event.preventDefault();
+      const nextTab = COMPARE_WORKSPACE_TABS[nextIndex];
+      if (nextTab) {
+        setActiveCompareTab(nextTab.id);
+        compareTabRefs.current[nextTab.id]?.focus();
       }
     }
   };
 
   return (
     <div className="w-full space-y-6">
-      {/* Document Uploader */}
-      <DocumentUploader onParsed={handleParsed} onError={handleError} />
+      {/* Workspace Mode Switcher */}
+      <div className="flex items-center justify-center">
+        <div
+          role="radiogroup"
+          aria-label="Workspace Mode Selection"
+          className="inline-flex rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900"
+        >
+          <button
+            type="button"
+            role="radio"
+            aria-checked={workspaceMode === 'single'}
+            onClick={() => {
+              setWorkspaceMode('single');
+              setError(null);
+            }}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all sm:text-sm ${
+              workspaceMode === 'single'
+                ? 'bg-white text-blue-700 shadow-xs dark:bg-zinc-800 dark:text-blue-400'
+                : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
+            }`}
+          >
+            <Layers className="h-4 w-4" aria-hidden="true" />
+            <span>Single Document</span>
+          </button>
 
-      {/* Error Alert Display */}
+          <button
+            type="button"
+            role="radio"
+            aria-checked={workspaceMode === 'compare'}
+            onClick={() => {
+              setWorkspaceMode('compare');
+              setError(null);
+            }}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all sm:text-sm ${
+              workspaceMode === 'compare'
+                ? 'bg-white text-purple-700 shadow-xs dark:bg-zinc-800 dark:text-purple-400'
+                : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
+            }`}
+          >
+            <GitCompare className="h-4 w-4" aria-hidden="true" />
+            <span>Compare Contracts</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Global Error Alert Display */}
       {error && (
         <div
           role="alert"
@@ -212,100 +418,258 @@ export function LegalWorkspace(): React.JSX.Element {
         </div>
       )}
 
-      {/* Workspace Tabs & Panels (Shown when document is uploaded) */}
-      {parsedDoc && (
-        <div className="space-y-4">
-          {/* Accessible Tab List */}
-          <div
-            role="tablist"
-            aria-label="Document Analysis Views"
-            className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-100/70 p-1.5 dark:border-zinc-800 dark:bg-zinc-900/70"
-          >
-            {WORKSPACE_TABS.map((tab, idx) => {
-              const IconComponent = tab.icon;
-              const isSelected = activeTab === tab.id;
+      {/* ================= SINGLE DOCUMENT WORKSPACE ================= */}
+      {workspaceMode === 'single' && (
+        <div className="space-y-6">
+          {/* Document Uploader */}
+          <DocumentUploader onParsed={handleSingleParsed} onError={handleError} />
 
-              return (
-                <button
-                  key={tab.id}
-                  ref={(el) => {
-                    tabRefs.current[tab.id] = el;
-                  }}
-                  id={`tab-${tab.id}`}
-                  role="tab"
-                  type="button"
-                  aria-selected={isSelected}
-                  aria-controls={`panel-${tab.id}`}
-                  tabIndex={isSelected ? 0 : -1}
-                  onClick={() => setActiveTab(tab.id)}
-                  onKeyDown={(e) => handleTabKeyDown(e, idx)}
-                  className={`flex min-w-[140px] flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all sm:text-sm ${
-                    isSelected
-                      ? 'bg-white text-blue-700 shadow-sm dark:bg-zinc-800 dark:text-blue-400'
-                      : 'text-zinc-600 hover:bg-white/50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'
-                  }`}
-                >
-                  <IconComponent className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* Workspace Tabs & Panels (Shown when document is uploaded) */}
+          {parsedDoc && (
+            <div className="space-y-4">
+              {/* Accessible Tab List */}
+              <div
+                role="tablist"
+                aria-label="Document Analysis Views"
+                className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-100/70 p-1.5 dark:border-zinc-800 dark:bg-zinc-900/70"
+              >
+                {SINGLE_WORKSPACE_TABS.map((tab, idx) => {
+                  const IconComponent = tab.icon;
+                  const isSelected = activeSingleTab === tab.id;
 
-          {/* Tab Panel 1: Document Preview */}
-          <div
-            id="panel-preview"
-            role="tabpanel"
-            tabIndex={0}
-            aria-labelledby="tab-preview"
-            hidden={activeTab !== 'preview'}
-            className="focus:outline-hidden"
-          >
-            {activeTab === 'preview' && <DocumentPreview doc={parsedDoc} />}
-          </div>
+                  return (
+                    <button
+                      key={tab.id}
+                      ref={(el) => {
+                        singleTabRefs.current[tab.id] = el;
+                      }}
+                      id={`tab-${tab.id}`}
+                      role="tab"
+                      type="button"
+                      aria-selected={isSelected}
+                      aria-controls={`panel-${tab.id}`}
+                      tabIndex={isSelected ? 0 : -1}
+                      onClick={() => setActiveSingleTab(tab.id)}
+                      onKeyDown={(e) => handleSingleTabKeyDown(e, idx)}
+                      className={`flex min-w-[120px] flex-1 items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all sm:text-sm ${
+                        isSelected
+                          ? 'bg-white text-blue-700 shadow-xs dark:bg-zinc-800 dark:text-blue-400'
+                          : 'text-zinc-600 hover:bg-white/50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'
+                      }`}
+                    >
+                      <IconComponent className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
-          {/* Tab Panel 2: Plain-Language Summary */}
-          <div
-            id="panel-summary"
-            role="tabpanel"
-            tabIndex={0}
-            aria-labelledby="tab-summary"
-            hidden={activeTab !== 'summary'}
-            className="focus:outline-hidden"
-          >
-            {activeTab === 'summary' && (
-              <SummaryCard
-                text={parsedDoc.text}
-                filename={parsedDoc.filename}
-                state={summaryState}
-                onStateChange={setSummaryState}
-              />
-            )}
-          </div>
+              {/* Tab Panel 1: Document Preview */}
+              <div
+                id="panel-preview"
+                role="tabpanel"
+                tabIndex={0}
+                aria-labelledby="tab-preview"
+                hidden={activeSingleTab !== 'preview'}
+                className="focus:outline-hidden"
+              >
+                {activeSingleTab === 'preview' && <DocumentPreview doc={parsedDoc} />}
+              </div>
 
-          {/* Tab Panel 3: Clause Risk Analysis */}
-          <div
-            id="panel-clauses"
-            role="tabpanel"
-            tabIndex={0}
-            aria-labelledby="tab-clauses"
-            hidden={activeTab !== 'clauses'}
-            className="focus:outline-hidden"
-          >
-            {activeTab === 'clauses' && (
-              <ClauseList
-                text={parsedDoc.text}
-                filename={parsedDoc.filename}
-                state={clausesState}
-                onStateChange={setClausesState}
-              />
-            )}
-          </div>
+              {/* Tab Panel 2: Plain-Language Summary */}
+              <div
+                id="panel-summary"
+                role="tabpanel"
+                tabIndex={0}
+                aria-labelledby="tab-summary"
+                hidden={activeSingleTab !== 'summary'}
+                className="focus:outline-hidden"
+              >
+                {activeSingleTab === 'summary' && (
+                  <SummaryCard
+                    text={parsedDoc.text}
+                    filename={parsedDoc.filename}
+                    state={summaryState}
+                    onStateChange={setSummaryState}
+                  />
+                )}
+              </div>
+
+              {/* Tab Panel 3: Clause Risk Analysis */}
+              <div
+                id="panel-clauses"
+                role="tabpanel"
+                tabIndex={0}
+                aria-labelledby="tab-clauses"
+                hidden={activeSingleTab !== 'clauses'}
+                className="focus:outline-hidden"
+              >
+                {activeSingleTab === 'clauses' && (
+                  <ClauseList
+                    text={parsedDoc.text}
+                    filename={parsedDoc.filename}
+                    state={clausesState}
+                    onStateChange={setClausesState}
+                  />
+                )}
+              </div>
+
+              {/* Tab Panel 4: Grounded Q&A with Citations */}
+              <div
+                id="panel-ask"
+                role="tabpanel"
+                tabIndex={0}
+                aria-labelledby="tab-ask"
+                hidden={activeSingleTab !== 'ask'}
+                className="focus:outline-hidden"
+              >
+                {activeSingleTab === 'ask' && (
+                  <AskQuestion
+                    text={parsedDoc.text}
+                    filename={parsedDoc.filename}
+                    state={askState}
+                    onStateChange={setAskState}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Initial empty state before single document upload */}
+          {!parsedDoc && !error && <DocumentPreview doc={null} />}
         </div>
       )}
 
-      {/* If no document uploaded yet, render empty state preview */}
-      {!parsedDoc && !error && <DocumentPreview doc={null} />}
+      {/* ================= DUAL DOCUMENT COMPARE WORKSPACE ================= */}
+      {workspaceMode === 'compare' && (
+        <div className="space-y-6">
+          {/* Dual Document Uploaders */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                  A
+                </span>
+                <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  Document A (Base Contract)
+                </h4>
+              </div>
+              <DocumentUploader onParsed={handleDocAParsed} onError={handleError} />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-600 text-xs font-bold text-white">
+                  B
+                </span>
+                <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  Document B (Revised / Alternative Contract)
+                </h4>
+              </div>
+              <DocumentUploader onParsed={handleDocBParsed} onError={handleError} />
+            </div>
+          </div>
+
+          {/* Show Compare Tabs when both documents are uploaded */}
+          {parsedDocA && parsedDocB ? (
+            <div className="space-y-4">
+              {/* Accessible Tab List for Compare Mode */}
+              <div
+                role="tablist"
+                aria-label="Document Comparison Views"
+                className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-100/70 p-1.5 dark:border-zinc-800 dark:bg-zinc-900/70"
+              >
+                {COMPARE_WORKSPACE_TABS.map((tab, idx) => {
+                  const IconComponent = tab.icon;
+                  const isSelected = activeCompareTab === tab.id;
+
+                  return (
+                    <button
+                      key={tab.id}
+                      ref={(el) => {
+                        compareTabRefs.current[tab.id] = el;
+                      }}
+                      id={`compare-tab-${tab.id}`}
+                      role="tab"
+                      type="button"
+                      aria-selected={isSelected}
+                      aria-controls={`compare-panel-${tab.id}`}
+                      tabIndex={isSelected ? 0 : -1}
+                      onClick={() => setActiveCompareTab(tab.id)}
+                      onKeyDown={(e) => handleCompareTabKeyDown(e, idx)}
+                      className={`flex min-w-[130px] flex-1 items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all sm:text-sm ${
+                        isSelected
+                          ? 'bg-white text-purple-700 shadow-xs dark:bg-zinc-800 dark:text-purple-400'
+                          : 'text-zinc-600 hover:bg-white/50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'
+                      }`}
+                    >
+                      <IconComponent className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Compare Panel 1: Comparison Matrix */}
+              <div
+                id="compare-panel-comparison"
+                role="tabpanel"
+                tabIndex={0}
+                aria-labelledby="compare-tab-comparison"
+                hidden={activeCompareTab !== 'comparison'}
+                className="focus:outline-hidden"
+              >
+                {activeCompareTab === 'comparison' && (
+                  <CompareDocuments
+                    docA={{ text: parsedDocA.text, filename: parsedDocA.filename }}
+                    docB={{ text: parsedDocB.text, filename: parsedDocB.filename }}
+                    state={compareState}
+                    onStateChange={setCompareState}
+                  />
+                )}
+              </div>
+
+              {/* Compare Panel 2: Preview Doc A */}
+              <div
+                id="compare-panel-previewA"
+                role="tabpanel"
+                tabIndex={0}
+                aria-labelledby="compare-tab-previewA"
+                hidden={activeCompareTab !== 'previewA'}
+                className="focus:outline-hidden"
+              >
+                {activeCompareTab === 'previewA' && <DocumentPreview doc={parsedDocA} />}
+              </div>
+
+              {/* Compare Panel 3: Preview Doc B */}
+              <div
+                id="compare-panel-previewB"
+                role="tabpanel"
+                tabIndex={0}
+                aria-labelledby="compare-tab-previewB"
+                hidden={activeCompareTab !== 'previewB'}
+                className="focus:outline-hidden"
+              >
+                {activeCompareTab === 'previewB' && <DocumentPreview doc={parsedDocB} />}
+              </div>
+            </div>
+          ) : (
+            <div className="dark:bg-zinc-850/40 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 p-8 text-center dark:border-zinc-800">
+              <GitCompare
+                className="mx-auto h-8 w-8 text-zinc-400 dark:text-zinc-600"
+                aria-hidden="true"
+              />
+              <p className="mt-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Upload both Document A and Document B to compare
+              </p>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                Once both contracts are uploaded, you can view a topic-by-topic comparison matrix,
+                difference analysis, and party favorability insights.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

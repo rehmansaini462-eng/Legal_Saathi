@@ -14,7 +14,10 @@ import type {
   ClauseItem,
   ApiError,
   ClauseRiskLevel,
+  AskState,
+  CompareState,
 } from '@/types/legal';
+import { AskResponseSchema, ComparisonResponseSchema } from '@/types/legal';
 
 /**
  * Zod schema validating structured API error objects.
@@ -62,11 +65,36 @@ export const clausesStateSchema: z.ZodType<ClausesState> = z.object({
 });
 
 /**
+ * Zod schema validating persisted document Q&A history states.
+ */
+export const askStateSchema: z.ZodType<AskState> = z.object({
+  history: z.array(
+    z.object({
+      question: z.string(),
+      response: AskResponseSchema.nullable(),
+      error: apiErrorSchema.optional(),
+    })
+  ),
+  status: z.enum(['idle', 'loading', 'done', 'error']),
+});
+
+/**
+ * Zod schema validating persisted contract comparison states.
+ */
+export const compareStateSchema: z.ZodType<CompareState> = z.object({
+  comparison: ComparisonResponseSchema.nullable(),
+  status: z.enum(['idle', 'loading', 'done', 'error']),
+  error: apiErrorSchema.optional(),
+});
+
+/**
  * Well-known sessionStorage keys for LegalSaathi application state.
  */
 export const STORAGE_KEYS = {
   SUMMARY: 'legalsaathi:summary',
   CLAUSES: 'legalsaathi:clauses',
+  ASK: 'legalsaathi:ask',
+  COMPARE: 'legalsaathi:compare',
 } as const;
 
 /**

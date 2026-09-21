@@ -45,14 +45,14 @@ const CAPABILITY_FEATURES: FeatureCard[] = [
     title: 'Document Comparison',
     description: 'Compare multiple contracts side-by-side to highlight deviations and alterations.',
     icon: GitCompare,
-    status: 'coming-soon',
+    status: 'active',
   },
   {
     id: 'feature-qa',
     title: 'Q&A Companion',
     description: 'Ask questions and get answers grounded strictly in your document text.',
     icon: MessageSquare,
-    status: 'coming-soon',
+    status: 'active',
   },
 ];
 
