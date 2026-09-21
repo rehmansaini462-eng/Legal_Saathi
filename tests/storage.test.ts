@@ -11,9 +11,11 @@ import {
   clearSession,
   summaryStateSchema,
   clausesStateSchema,
+  lawyerPrepStateSchema,
+  checklistStateSchema,
   STORAGE_KEYS,
 } from '@/lib/utils/storage';
-import type { SummaryState, ClausesState } from '@/types/legal';
+import type { SummaryState, ClausesState, LawyerPrepState, ChecklistState } from '@/types/legal';
 
 describe('sessionStorage utils — Code Quality', () => {
   beforeEach(() => {
@@ -155,5 +157,55 @@ describe('sessionStorage schemas — Problem Alignment & Security', () => {
     expect(loaded?.status).toBe('error');
     expect(loaded?.error?.code).toBe('GEMINI_HIGH_DEMAND');
     expect(loaded?.error?.status).toBe(503);
+  });
+
+  it('persists and validates lawyer preparation state', () => {
+    const samplePrepState: LawyerPrepState = {
+      prep: {
+        questions: [
+          {
+            question: 'Is the indemnity uncapped?',
+            whyItMatters: 'Protects from unlimited liability.',
+            category: 'risks',
+          },
+        ],
+        keyDocumentsToBring: ['Signed agreement'],
+        summaryForLawyer: 'Client has a 1-year contract with uncapped indemnity.',
+      },
+      status: 'done',
+    };
+
+    saveToSession(STORAGE_KEYS.LAWYER_PREP, samplePrepState);
+    const loaded = loadFromSession(STORAGE_KEYS.LAWYER_PREP, lawyerPrepStateSchema);
+
+    expect(loaded).not.toBeNull();
+    expect(loaded?.status).toBe('done');
+    expect(loaded?.prep?.questions).toHaveLength(1);
+    expect(loaded?.prep?.questions?.[0]?.category).toBe('risks');
+  });
+
+  it('persists and validates action checklist state', () => {
+    const sampleChecklistState: ChecklistState = {
+      checklist: {
+        items: [
+          {
+            step: 'Provide renewal notice',
+            priority: 'high',
+            deadline: '30 days before March 31',
+            rationale: 'Avoids automatic renewal',
+          },
+        ],
+        overallUrgency: 'urgent',
+      },
+      status: 'done',
+    };
+
+    saveToSession(STORAGE_KEYS.CHECKLIST, sampleChecklistState);
+    const loaded = loadFromSession(STORAGE_KEYS.CHECKLIST, checklistStateSchema);
+
+    expect(loaded).not.toBeNull();
+    expect(loaded?.status).toBe('done');
+    expect(loaded?.checklist?.overallUrgency).toBe('urgent');
+    expect(loaded?.checklist?.items?.[0]?.priority).toBe('high');
   });
 });

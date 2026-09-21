@@ -358,6 +358,169 @@ export interface CompareState {
 }
 
 /**
+ * Valid legal question categories for lawyer consultation preparation.
+ *
+ * @example
+ *   const cat: LawyerQuestionCategory = 'rights';
+ */
+export type LawyerQuestionCategory =
+  'rights' | 'obligations' | 'risks' | 'timelines' | 'financial' | 'termination';
+
+/**
+ * Individual tailored question for user to ask their attorney or legal advisor.
+ *
+ * @example
+ *   const q: LawyerQuestion = {
+ *     question: 'Can the vendor terminate without cause on 7 days notice?',
+ *     whyItMatters: '7 days is very short and could disrupt your ongoing operations.',
+ *     category: 'termination'
+ *   };
+ * @alignsWith Problem Statement: "Helping users prepare information or questions for a legal professional"
+ */
+export interface LawyerQuestion {
+  question: string;
+  whyItMatters: string;
+  category: LawyerQuestionCategory;
+}
+
+/**
+ * Comprehensive preparation package for consulting a qualified legal professional.
+ *
+ * @example
+ *   const prep: LawyerPrepResponse = {
+ *     questions: [
+ *       {
+ *         question: 'Is the unlimited indemnity enforceable under local law?',
+ *         whyItMatters: 'Protects you from catastrophic uncapped liability.',
+ *         category: 'risks'
+ *       }
+ *     ],
+ *     keyDocumentsToBring: ['Signed NDA', 'Email correspondence on fee schedule'],
+ *     summaryForLawyer: 'Client is entering a 1-year SaaS contract with uncapped indemnity clauses.'
+ *   };
+ * @alignsWith Problem Statement: "Helping users prepare information or questions for a legal professional"
+ */
+export interface LawyerPrepResponse {
+  questions: LawyerQuestion[];
+  keyDocumentsToBring: string[];
+  summaryForLawyer: string;
+}
+
+/**
+ * Priority levels for actionable checklist items extracted from legal documents.
+ *
+ * @example
+ *   const p: ActionPriority = 'high';
+ */
+export type ActionPriority = 'high' | 'medium' | 'low';
+
+/**
+ * Single actionable step derived from contractual clauses, obligations, or deadlines.
+ *
+ * @example
+ *   const item: ActionItem = {
+ *     step: 'Provide written notice of renewal intent 30 days prior to expiry.',
+ *     priority: 'high',
+ *     deadline: '30 days before March 31, 2027',
+ *     rationale: 'Failing to give timely notice triggers automatic 12-month renewal.'
+ *   };
+ * @alignsWith Problem Statement: "Generating summaries, checklists, or other actionable outputs"
+ */
+export interface ActionItem {
+  step: string;
+  priority: ActionPriority;
+  deadline?: string;
+  rationale: string;
+}
+
+/**
+ * Overall urgency level for document-derived action items.
+ *
+ * @example
+ *   const urgency: ChecklistUrgency = 'urgent';
+ */
+export type ChecklistUrgency = 'urgent' | 'soon' | 'routine';
+
+/**
+ * Complete actionable checklist payload containing prioritized steps and overall urgency.
+ *
+ * @example
+ *   const checklist: ChecklistResponse = {
+ *     items: [
+ *       {
+ *         step: 'Request modification of Section 4 indemnity cap.',
+ *         priority: 'high',
+ *         rationale: 'Current indemnity is uncapped and one-sided.'
+ *       }
+ *     ],
+ *     overallUrgency: 'urgent'
+ *   };
+ * @alignsWith Problem Statement: "Generating summaries, checklists, or other actionable outputs"
+ */
+export interface ChecklistResponse {
+  items: ActionItem[];
+  overallUrgency: ChecklistUrgency;
+}
+
+/**
+ * Payload expected by the POST /api/lawyer-prep endpoint.
+ *
+ * @example
+ *   const req: LawyerPrepRequest = {
+ *     text: 'This agreement is entered into...',
+ *     filename: 'nda.pdf'
+ *   };
+ */
+export interface LawyerPrepRequest {
+  text: string;
+  filename?: string;
+}
+
+/**
+ * State container for lawyer preparation analysis and UI interaction state.
+ *
+ * @example
+ *   const state: LawyerPrepState = {
+ *     prep: null,
+ *     status: 'idle'
+ *   };
+ */
+export interface LawyerPrepState {
+  prep: LawyerPrepResponse | null;
+  status: 'idle' | 'loading' | 'done' | 'error';
+  error?: ApiError;
+}
+
+/**
+ * Payload expected by the POST /api/checklist endpoint.
+ *
+ * @example
+ *   const req: ChecklistRequest = {
+ *     text: 'This agreement is entered into...',
+ *     filename: 'contract.pdf'
+ *   };
+ */
+export interface ChecklistRequest {
+  text: string;
+  filename?: string;
+}
+
+/**
+ * State container for actionable checklist analysis and UI interaction state.
+ *
+ * @example
+ *   const state: ChecklistState = {
+ *     checklist: null,
+ *     status: 'idle'
+ *   };
+ */
+export interface ChecklistState {
+  checklist: ChecklistResponse | null;
+  status: 'idle' | 'loading' | 'done' | 'error';
+  error?: ApiError;
+}
+
+/**
  * Zod schema for Citation structure validation.
  */
 export const CitationSchema = z.object({
@@ -401,6 +564,57 @@ export const ComparisonResponseSchema = z.object({
 });
 
 /**
+ * Zod schema for LawyerQuestion structure validation.
+ */
+export const LawyerQuestionSchema = z.object({
+  question: z.string().describe('Targeted question the user should ask a qualified lawyer'),
+  whyItMatters: z
+    .string()
+    .describe('Plain language explanation of why this question is crucial to ask'),
+  category: z
+    .enum(['rights', 'obligations', 'risks', 'timelines', 'financial', 'termination'])
+    .describe('Category of the legal question'),
+});
+
+/**
+ * Zod schema for LawyerPrepResponse structure validation.
+ */
+export const LawyerPrepResponseSchema = z.object({
+  questions: z
+    .array(LawyerQuestionSchema)
+    .describe('List of 5-8 targeted questions for legal counsel'),
+  keyDocumentsToBring: z
+    .array(z.string())
+    .describe('List of relevant documents, records, or proofs the user should bring'),
+  summaryForLawyer: z
+    .string()
+    .describe('2-3 sentence executive briefing the user can share with their lawyer'),
+});
+
+/**
+ * Zod schema for ActionItem structure validation.
+ */
+export const ActionItemSchema = z.object({
+  step: z.string().describe('Concrete actionable next step the user needs to take'),
+  priority: z.enum(['high', 'medium', 'low']).describe('Priority level: high, medium, or low'),
+  deadline: z
+    .string()
+    .optional()
+    .describe('Deadline or time window extracted from the document if present'),
+  rationale: z.string().describe('Plain explanation of why this step must be completed'),
+});
+
+/**
+ * Zod schema for ChecklistResponse structure validation.
+ */
+export const ChecklistResponseSchema = z.object({
+  items: z.array(ActionItemSchema).describe('Actionable checklist items ordered by urgency'),
+  overallUrgency: z
+    .enum(['urgent', 'soon', 'routine'])
+    .describe('Overall urgency rating: urgent, soon, or routine'),
+});
+
+/**
  * Zod schema for validating incoming AskRequest payloads.
  */
 export const AskRequestSchema = z.object({
@@ -411,6 +625,22 @@ export const AskRequestSchema = z.object({
     .trim()
     .min(3, { message: 'Question must be at least 3 characters long.' })
     .max(500, { message: 'Question must not exceed 500 characters.' }),
+});
+
+/**
+ * Zod schema for validating incoming LawyerPrepRequest payloads.
+ */
+export const LawyerPrepRequestSchema = z.object({
+  text: z.string().trim().min(10, { message: 'Document text must be at least 10 characters.' }),
+  filename: z.string().optional().default('document.txt'),
+});
+
+/**
+ * Zod schema for validating incoming ChecklistRequest payloads.
+ */
+export const ChecklistRequestSchema = z.object({
+  text: z.string().trim().min(10, { message: 'Document text must be at least 10 characters.' }),
+  filename: z.string().optional().default('document.txt'),
 });
 
 /**

@@ -16,8 +16,15 @@ import type {
   ClauseRiskLevel,
   AskState,
   CompareState,
+  LawyerPrepState,
+  ChecklistState,
 } from '@/types/legal';
-import { AskResponseSchema, ComparisonResponseSchema } from '@/types/legal';
+import {
+  AskResponseSchema,
+  ComparisonResponseSchema,
+  LawyerPrepResponseSchema,
+  ChecklistResponseSchema,
+} from '@/types/legal';
 
 /**
  * Zod schema validating structured API error objects.
@@ -88,6 +95,24 @@ export const compareStateSchema: z.ZodType<CompareState> = z.object({
 });
 
 /**
+ * Zod schema validating persisted lawyer preparation states.
+ */
+export const lawyerPrepStateSchema: z.ZodType<LawyerPrepState> = z.object({
+  prep: LawyerPrepResponseSchema.nullable(),
+  status: z.enum(['idle', 'loading', 'done', 'error']),
+  error: apiErrorSchema.optional(),
+});
+
+/**
+ * Zod schema validating persisted actionable checklist states.
+ */
+export const checklistStateSchema: z.ZodType<ChecklistState> = z.object({
+  checklist: ChecklistResponseSchema.nullable(),
+  status: z.enum(['idle', 'loading', 'done', 'error']),
+  error: apiErrorSchema.optional(),
+});
+
+/**
  * Well-known sessionStorage keys for LegalSaathi application state.
  */
 export const STORAGE_KEYS = {
@@ -95,6 +120,8 @@ export const STORAGE_KEYS = {
   CLAUSES: 'legalsaathi:clauses',
   ASK: 'legalsaathi:ask',
   COMPARE: 'legalsaathi:compare',
+  LAWYER_PREP: 'legalsaathi:lawyer_prep',
+  CHECKLIST: 'legalsaathi:checklist',
 } as const;
 
 /**

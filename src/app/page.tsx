@@ -8,8 +8,17 @@
  * @qualityTier production — full JSDoc, strict TypeScript, zero warnings
  */
 
-import React from 'react';
-import { Scale, Sparkles, ShieldAlert, GitCompare, MessageSquare, Award } from 'lucide-react';
+import {
+  Scale,
+  Sparkles,
+  ShieldAlert,
+  GitCompare,
+  MessageSquare,
+  Award,
+  Briefcase,
+  ListChecks,
+  ShieldCheck,
+} from 'lucide-react';
 import { APP_NAME, APP_TAGLINE } from '@/config/constants';
 import { LegalWorkspace, DisclaimerBanner } from '@/components/legal';
 
@@ -50,8 +59,33 @@ const CAPABILITY_FEATURES: FeatureCard[] = [
   {
     id: 'feature-qa',
     title: 'Q&A Companion',
-    description: 'Ask questions and get answers grounded strictly in your document text.',
+    description:
+      'Ask questions and get answers grounded strictly in your document text with citations.',
     icon: MessageSquare,
+    status: 'active',
+  },
+  {
+    id: 'feature-lawyer-prep',
+    title: 'Lawyer Preparation',
+    description:
+      'Targeted consultation questions, case briefing summary, and documents-to-bring checklist.',
+    icon: Briefcase,
+    status: 'active',
+  },
+  {
+    id: 'feature-action-checklist',
+    title: 'Action Checklist',
+    description:
+      'Prioritized actionable next steps, extracted deadlines, and interactive completion tracking.',
+    icon: ListChecks,
+    status: 'active',
+  },
+  {
+    id: 'feature-pii-redaction',
+    title: 'Privacy PII Redaction',
+    description:
+      'Client-side masking of Aadhaar, PAN, emails, phones, and bank accounts before AI processing.',
+    icon: ShieldCheck,
     status: 'active',
   },
 ];
@@ -139,7 +173,7 @@ export default function HomePage(): React.JSX.Element {
               Empowering non-lawyers with end-to-end legal comprehension and risk intelligence
             </p>
 
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {CAPABILITY_FEATURES.map((feature) => {
                 const IconComponent = feature.icon;
                 const isActive = feature.status === 'active';

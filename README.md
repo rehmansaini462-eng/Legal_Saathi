@@ -52,9 +52,12 @@ LegalSaathi bridges the gap between complex legal documents and everyday underst
 - [x] Plain-language clause-by-clause breakdown
 - [x] Executive summary generation with key takeaways
 - [x] Critical risk and red-flag scoring
-- [x] Grounded document question answering (RAG)
-- [x] Privacy-first client-side document redaction
-- [x] Responsive, accessible design with dark mode
+- [x] Grounded document question answering with verbatim citations (RAG)
+- [x] Side-by-side contract comparison matrix with party favorability
+- [x] Lawyer Preparation (questions to ask, documents to bring, summary to share)
+- [x] Action Checklist with priorities, deadlines, and task tracking
+- [x] Client-side PII Redaction (privacy-first: Aadhaar, PAN, emails, phones, accounts)
+- [x] Responsive, accessible design with dark mode and persistent session storage
 
 ---
 
@@ -78,13 +81,13 @@ LegalSaathi bridges the gap between complex legal documents and everyday underst
 ```
 [User / Browser]
        │
-       ▼ (Multipart Form / drag-and-drop)
-[Next.js Server API: /api/parse]
+       ▼ (Client-Side PII Masking: redactPII)
+[Next.js Server API: /api/parse, /api/summarize, /api/clauses, /api/ask, /api/compare, /api/lawyer-prep, /api/checklist]
        │
        ├─► MIME Type & Size Validation (10MB Limit)
-       ├─► Buffer-based Extraction (pdf-parse / mammoth)
-       ├─► Text Sanitization & OCR Warning Checks
-       └─► Returns Structured ParsedDocument JSON
+       ├─► In-Memory Buffer Extraction (pdf-parse / mammoth)
+       ├─► Text Sanitization & Anti-Injection Guardrails
+       └─► Returns Strongly-Typed Schema-Validated JSON
 ```
 
 ---
@@ -172,20 +175,20 @@ LegalSaathi is optimized for one-click deployment on [Vercel](https://vercel.com
 - [x] **Day 1: Production Foundation & Parsing Pipeline** — Ultra-strict TypeScript, in-memory PDF/DOCX/TXT parsing, WCAG 2.1 AA UI workspace, CI/CD pipeline, and security headers.
 - [x] **Day 2: Plain-Language AI Summarization & Clause Risk Engine** — Streaming plain-language summary with executive takeaways, clause risk scoring (high/medium/low), and multi-model retry/fallback chain.
 - [x] **Day 3: Grounded Q&A with Citations & Contract Comparison Matrix** — Interactive document Q&A with exact quoted citations, side-by-side contract comparison matrix, and party favorability analysis.
-- [ ] **Day 4: Lawyer Discussion Prep & Exportable PDF Reports** — Structured questions for legal counsel, red-flag checklists, and accessible export summaries.
+- [x] **Day 4: Lawyer Preparation, Action Checklist & Privacy-First PII Redaction** — Structured consultation questions, documents-to-bring checklist, case briefings, actionable next-steps checklist with deadlines, and zero-trust client-side PII redaction.
 
 ---
 
 ## Hackathon Evaluation Alignment
 
-| Criteria                        | Our Implementation                                                                                                                                                                                                                                    |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Code Quality**                | Strict TypeScript (no any), ESLint 0-warnings, Prettier via Husky, JSDoc with @param/@returns/@throws/@example on every export, modular architecture (types/, lib/, components/legal/), barrel exports, conventional commits                          |
-| **Security**                    | Zod env validation, MIME whitelist (PDF/DOCX/TXT only), 10MB size cap, 100K char comparison limit, in-memory parsing (no disk writes), no stack trace leakage, CSP-lite security headers, .env isolation, server-only route handlers                  |
-| **Efficiency**                  | Next.js 16 Turbopack, React Server Components, streaming-ready architecture, minimal client bundle, serverExternalPackages for native modules                                                                                                         |
-| **Testing**                     | Vitest unit tests with criteria-tagged describe blocks (Security / Problem Alignment / Code Quality), CI on every push (lint + type-check + format + build)                                                                                           |
-| **Accessibility**               | Semantic HTML5 (main, section, header, footer), ARIA labels & roles on all interactive elements, aria-live for async status, keyboard navigation, focus-visible rings, skip-to-content link, WCAG AA contrast, screen-reader-tested heading hierarchy |
-| **Problem Statement Alignment** | Directly implements 3 of the challenge's potential use cases: summarizing complex documents, answering questions with clause citations, and comparing contracts side-by-side. Includes non-advice disclaimer and grounded guardrails.                 |
+| Criteria                        | Our Implementation                                                                                                                                                                                                                                                                                         |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Code Quality**                | Strict TypeScript (no any), ESLint 0-warnings, Prettier via Husky, JSDoc with @param/@returns/@throws/@example on every export, modular architecture (types/, lib/, components/legal/), barrel exports, conventional commits                                                                               |
+| **Security**                    | Zod env validation, MIME whitelist (PDF/DOCX/TXT only), 10MB size cap, 100K char comparison limit, in-memory parsing (no disk writes), no stack trace leakage, CSP-lite security headers, .env isolation, server-only route handlers, client-side PII redaction (Aadhaar/PAN/Phone/Email masking)          |
+| **Efficiency**                  | Next.js 16 Turbopack, React Server Components, streaming-ready architecture, minimal client bundle, serverExternalPackages for native modules                                                                                                                                                              |
+| **Testing**                     | Vitest unit tests with criteria-tagged describe blocks (Security / Problem Alignment / Code Quality), CI on every push (lint + type-check + format + build)                                                                                                                                                |
+| **Accessibility**               | Semantic HTML5 (main, section, header, footer), ARIA labels & roles on all interactive elements, aria-live for async status, keyboard navigation, focus-visible rings, skip-to-content link, WCAG AA contrast, screen-reader-tested heading hierarchy                                                      |
+| **Problem Statement Alignment** | Directly implements all four H25 potential use cases: summarizing complex documents, answering questions with clause citations, comparing contracts side-by-side, supporting lawyer preparation (questions + documents list), generating actionable checklists, and including privacy-first PII redaction. |
 
 ---
 

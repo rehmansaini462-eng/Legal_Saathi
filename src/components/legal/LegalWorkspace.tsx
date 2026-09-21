@@ -11,7 +11,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect, type KeyboardEvent } from 'react';
+import React, { useState, useRef, useEffect, useMemo, type KeyboardEvent } from 'react';
 import {
   AlertCircle,
   XCircle,
@@ -21,6 +21,8 @@ import {
   MessageSquare,
   GitCompare,
   Layers,
+  Briefcase,
+  ListChecks,
 } from 'lucide-react';
 import { DocumentUploader } from './DocumentUploader';
 import { DocumentPreview } from './DocumentPreview';
@@ -28,6 +30,10 @@ import { SummaryCard } from './SummaryCard';
 import { ClauseList } from './ClauseList';
 import { AskQuestion } from './AskQuestion';
 import { CompareDocuments } from './CompareDocuments';
+import { LawyerPrepCard } from './LawyerPrepCard';
+import { ActionChecklist } from './ActionChecklist';
+import { RedactPIIPanel } from './RedactPIIPanel';
+import { redactPII } from '@/lib/utils/redact';
 import type {
   ApiError,
   ParsedDocument,
@@ -35,6 +41,8 @@ import type {
   ClausesState,
   AskState,
   CompareState,
+  LawyerPrepState,
+  ChecklistState,
 } from '@/types/legal';
 import {
   STORAGE_KEYS,
@@ -45,13 +53,15 @@ import {
   clausesStateSchema,
   askStateSchema,
   compareStateSchema,
+  lawyerPrepStateSchema,
+  checklistStateSchema,
 } from '@/lib/utils/storage';
 
 /** Available workspace modes. */
 type WorkspaceMode = 'single' | 'compare';
 
 /** Available tab views in Single Document mode. */
-type SingleWorkspaceTab = 'preview' | 'summary' | 'clauses' | 'ask';
+type SingleWorkspaceTab = 'preview' | 'summary' | 'clauses' | 'ask' | 'lawyerPrep' | 'checklist';
 
 /** Available tab views in Compare mode. */
 type CompareWorkspaceTab = 'previewA' | 'previewB' | 'comparison';
@@ -94,6 +104,18 @@ const SINGLE_WORKSPACE_TABS: readonly SingleTabDefinition[] = [
     label: 'Ask Questions',
     icon: MessageSquare,
     description: 'Grounded Q&A with exact source text citations',
+  },
+  {
+    id: 'lawyerPrep',
+    label: 'Prepare for Lawyer',
+    icon: Briefcase,
+    description: 'Targeted consultation questions, case briefing, and document checklist',
+  },
+  {
+    id: 'checklist',
+    label: 'Action Checklist',
+    icon: ListChecks,
+    description: 'Prioritized actionable steps, obligations, and deadlines',
   },
 ] as const;
 
@@ -197,6 +219,48 @@ export function LegalWorkspace(): React.JSX.Element {
     return { comparison: null, status: 'idle' };
   });
 
+  // Lifted state with lazy sessionStorage hydration for Lawyer Prep
+  const [lawyerPrepState, setLawyerPrepState] = useState<LawyerPrepState>(() => {
+    if (typeof window === 'undefined') {
+      return { prep: null, status: 'idle' };
+    }
+    const saved = loadFromSession(STORAGE_KEYS.LAWYER_PREP, lawyerPrepStateSchema);
+    if (saved) {
+      const restoredStatus =
+        saved.status === 'loading' ? (saved.prep ? 'done' : 'idle') : saved.status;
+      return { ...saved, status: restoredStatus };
+    }
+    return { prep: null, status: 'idle' };
+  });
+
+  // Lifted state with lazy sessionStorage hydration for Action Checklist
+  const [checklistState, setChecklistState] = useState<ChecklistState>(() => {
+    if (typeof window === 'undefined') {
+      return { checklist: null, status: 'idle' };
+    }
+    const saved = loadFromSession(STORAGE_KEYS.CHECKLIST, checklistStateSchema);
+    if (saved) {
+      const restoredStatus =
+        saved.status === 'loading' ? (saved.checklist ? 'done' : 'idle') : saved.status;
+      return { ...saved, status: restoredStatus };
+    }
+    return { checklist: null, status: 'idle' };
+  });
+
+  // Client-side Privacy & PII Redaction toggle state
+  const [isRedactingPii, setIsRedactingPii] = useState<boolean>(false);
+
+  const parsedDocText = parsedDoc?.text;
+
+  // Compute client-side PII redactions for single mode document
+  const { redactedDocText, piiDetections } = useMemo(() => {
+    if (!parsedDocText) return { redactedDocText: '', piiDetections: [] };
+    const res = redactPII(parsedDocText);
+    return { redactedDocText: res.redactedText, piiDetections: res.detections };
+  }, [parsedDocText]);
+
+  const activeDocText = isRedactingPii ? redactedDocText : (parsedDoc?.text ?? '');
+
   const singleTabRefs = useRef<{ [key in SingleWorkspaceTab]?: HTMLButtonElement | null }>({});
   const compareTabRefs = useRef<{ [key in CompareWorkspaceTab]?: HTMLButtonElement | null }>({});
 
@@ -228,6 +292,20 @@ export function LegalWorkspace(): React.JSX.Element {
     }
   }, [compareState]);
 
+  // Persist lawyer prep state to sessionStorage
+  useEffect(() => {
+    if (lawyerPrepState.status !== 'idle' || lawyerPrepState.prep !== null) {
+      saveToSession(STORAGE_KEYS.LAWYER_PREP, lawyerPrepState);
+    }
+  }, [lawyerPrepState]);
+
+  // Persist checklist state to sessionStorage
+  useEffect(() => {
+    if (checklistState.status !== 'idle' || checklistState.checklist !== null) {
+      saveToSession(STORAGE_KEYS.CHECKLIST, checklistState);
+    }
+  }, [checklistState]);
+
   /**
    * Handles successful single document parsing.
    *
@@ -242,7 +320,15 @@ export function LegalWorkspace(): React.JSX.Element {
     setSummaryState({ text: '', status: 'idle' });
     setClausesState({ clauses: [], status: 'idle' });
     setAskState({ history: [], status: 'idle' });
-    clearSession([STORAGE_KEYS.SUMMARY, STORAGE_KEYS.CLAUSES, STORAGE_KEYS.ASK]);
+    setLawyerPrepState({ prep: null, status: 'idle' });
+    setChecklistState({ checklist: null, status: 'idle' });
+    clearSession([
+      STORAGE_KEYS.SUMMARY,
+      STORAGE_KEYS.CLAUSES,
+      STORAGE_KEYS.ASK,
+      STORAGE_KEYS.LAWYER_PREP,
+      STORAGE_KEYS.CHECKLIST,
+    ]);
   };
 
   /**
@@ -427,6 +513,13 @@ export function LegalWorkspace(): React.JSX.Element {
           {/* Workspace Tabs & Panels (Shown when document is uploaded) */}
           {parsedDoc && (
             <div className="space-y-4">
+              {/* Privacy & Client-Side Redaction Panel */}
+              <RedactPIIPanel
+                isRedacted={isRedactingPii}
+                onToggle={setIsRedactingPii}
+                detections={piiDetections}
+              />
+
               {/* Accessible Tab List */}
               <div
                 role="tablist"
@@ -451,7 +544,7 @@ export function LegalWorkspace(): React.JSX.Element {
                       tabIndex={isSelected ? 0 : -1}
                       onClick={() => setActiveSingleTab(tab.id)}
                       onKeyDown={(e) => handleSingleTabKeyDown(e, idx)}
-                      className={`flex min-w-[120px] flex-1 items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all sm:text-sm ${
+                      className={`flex min-w-[120px] flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-all sm:text-sm ${
                         isSelected
                           ? 'bg-white text-blue-700 shadow-xs dark:bg-zinc-800 dark:text-blue-400'
                           : 'text-zinc-600 hover:bg-white/50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200'
@@ -473,7 +566,11 @@ export function LegalWorkspace(): React.JSX.Element {
                 hidden={activeSingleTab !== 'preview'}
                 className="focus:outline-hidden"
               >
-                {activeSingleTab === 'preview' && <DocumentPreview doc={parsedDoc} />}
+                {activeSingleTab === 'preview' && (
+                  <DocumentPreview
+                    doc={isRedactingPii ? { ...parsedDoc, text: activeDocText } : parsedDoc}
+                  />
+                )}
               </div>
 
               {/* Tab Panel 2: Plain-Language Summary */}
@@ -487,7 +584,7 @@ export function LegalWorkspace(): React.JSX.Element {
               >
                 {activeSingleTab === 'summary' && (
                   <SummaryCard
-                    text={parsedDoc.text}
+                    text={activeDocText}
                     filename={parsedDoc.filename}
                     state={summaryState}
                     onStateChange={setSummaryState}
@@ -506,7 +603,7 @@ export function LegalWorkspace(): React.JSX.Element {
               >
                 {activeSingleTab === 'clauses' && (
                   <ClauseList
-                    text={parsedDoc.text}
+                    text={activeDocText}
                     filename={parsedDoc.filename}
                     state={clausesState}
                     onStateChange={setClausesState}
@@ -525,10 +622,48 @@ export function LegalWorkspace(): React.JSX.Element {
               >
                 {activeSingleTab === 'ask' && (
                   <AskQuestion
-                    text={parsedDoc.text}
+                    text={activeDocText}
                     filename={parsedDoc.filename}
                     state={askState}
                     onStateChange={setAskState}
+                  />
+                )}
+              </div>
+
+              {/* Tab Panel 5: Lawyer Consultation Preparation */}
+              <div
+                id="panel-lawyerPrep"
+                role="tabpanel"
+                tabIndex={0}
+                aria-labelledby="tab-lawyerPrep"
+                hidden={activeSingleTab !== 'lawyerPrep'}
+                className="focus:outline-hidden"
+              >
+                {activeSingleTab === 'lawyerPrep' && (
+                  <LawyerPrepCard
+                    text={activeDocText}
+                    filename={parsedDoc.filename}
+                    state={lawyerPrepState}
+                    onStateChange={setLawyerPrepState}
+                  />
+                )}
+              </div>
+
+              {/* Tab Panel 6: Actionable Next Steps Checklist */}
+              <div
+                id="panel-checklist"
+                role="tabpanel"
+                tabIndex={0}
+                aria-labelledby="tab-checklist"
+                hidden={activeSingleTab !== 'checklist'}
+                className="focus:outline-hidden"
+              >
+                {activeSingleTab === 'checklist' && (
+                  <ActionChecklist
+                    text={activeDocText}
+                    filename={parsedDoc.filename}
+                    state={checklistState}
+                    onStateChange={setChecklistState}
                   />
                 )}
               </div>

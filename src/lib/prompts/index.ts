@@ -24,3 +24,22 @@ export {
   type ComparisonResponse,
   type ComparisonRow,
 } from './compare';
+export {
+  buildLawyerPrepPrompt,
+  LawyerQuestionSchema,
+  LawyerPrepResponseSchema,
+  type LawyerPrepPromptInput,
+  type LawyerQuestion,
+  type LawyerPrepResponse,
+  type LawyerQuestionCategory,
+} from './lawyerPrep';
+export {
+  buildChecklistPrompt,
+  ActionItemSchema,
+  ChecklistResponseSchema,
+  type ChecklistPromptInput,
+  type ActionItem,
+  type ChecklistResponse,
+  type ActionPriority,
+  type ChecklistUrgency,
+} from './checklist';
