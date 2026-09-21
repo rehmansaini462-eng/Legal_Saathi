@@ -169,6 +169,22 @@ describe('checklist API — Code Quality & Security', () => {
     expect(parseResult.success).toBe(true);
   });
 
+  it('validates checklist items with nullable deadline and rationale', () => {
+    const checklistWithNulls = {
+      items: [
+        {
+          step: 'Review clause 5 terms',
+          priority: 'low',
+          deadline: null,
+          rationale: null,
+        },
+      ],
+      overallUrgency: 'routine',
+    };
+    const parseResult = ChecklistResponseSchema.safeParse(checklistWithNulls);
+    expect(parseResult.success).toBe(true);
+  });
+
   it('builds grounded prompt containing criteria and document text (Problem Alignment)', () => {
     const prompt = buildChecklistPrompt({
       text: 'Sample legal text with 15-day deadline.',

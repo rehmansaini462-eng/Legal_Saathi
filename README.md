@@ -50,37 +50,30 @@ LegalSaathi bridges the gap between complex legal documents and everyday underst
 
 ## Screenshots
 
-### Landing Page
+### Landing Page with Uploaded Document
 
-![Landing Page](docs/screenshots/01-landing.png)
+![Landing Page with Uploaded Document](public/screenshots/01-landing-uploaded.png)
+_Document uploader with parsed PDF preview, mode switcher (Single Document / Compare Contracts), and 7 capability cards marked Active._
 
-### Document Preview
+### AI Summary — Plain Language with Clause Citations
 
-![Preview](docs/screenshots/02-preview.png)
-
-### AI Summary
-
-![Summary](docs/screenshots/03-summary.png)
+![AI Summary](public/screenshots/02-ai-summary.png)
+_Streaming plain-language summary grounded in the document, with clause-level citations like [Clause 1.1] and structured sections (Purpose, Rights & Obligations, Deadlines)._
 
 ### Clause Risk Analysis
 
-![Clauses](docs/screenshots/04-clauses.png)
+![Clause Risk Analysis](public/screenshots/03-clause-risks.png)
+_Automated clause extraction with risk levels (high/medium/low), plain explanations, risk reasoning, and collapsible verbatim source text._
 
 ### Q&A with Citations
 
-![Q&A](docs/screenshots/05-qa.png)
-
-### Document Comparison
-
-![Compare](docs/screenshots/06-compare.png)
+![Q&A with Citations](public/screenshots/04-qa-citations.png)
+_Grounded Q&A — every answer includes quoted source citations and a confidence indicator, never fabricating content not in the document._
 
 ### Lawyer Preparation
 
-![Lawyer Prep](docs/screenshots/07-lawyer-prep.png)
-
-### Action Checklist
-
-![Checklist](docs/screenshots/08-checklist.png)
+![Lawyer Preparation](public/screenshots/05-lawyer-prep.png)
+_Categorized questions to ask a qualified lawyer, documents to bring, and a briefing summary for the consultation._
 
 ---
 
@@ -245,12 +238,15 @@ npm run analyze
 
 ## Deployment
 
+- **Live URL:** [https://legal-saathi-mu.vercel.app](https://legal-saathi-mu.vercel.app)
+- **CI/CD:** Deployed on Vercel with automatic CI/CD from `main` branch. Push to `main` triggers automatic redeploy.
+
 LegalSaathi is fully optimized for one-click deployment on [Vercel](https://vercel.com):
 
 1. **Import Repository**: Import the LegalSaathi repository into your Vercel dashboard.
 2. **Set Environment Variables**:
    - `GEMINI_API_KEY`: Your production Google Gemini API key.
-   - `NEXT_PUBLIC_APP_URL`: Your deployed Vercel domain (e.g. `https://legalsaathi.vercel.app`).
+   - `NEXT_PUBLIC_APP_URL`: Your deployed Vercel domain (`https://legal-saathi-mu.vercel.app`).
 3. **Deploy**: Vercel automatically runs `npm run build` and distributes the application globally across edge networks.
 4. **Post-Deploy Verification**:
    - Upload sample NDA or lease document.

@@ -104,8 +104,8 @@ export interface ClauseItem {
   originalText: string;
   plainExplanation: string;
   riskLevel: ClauseRiskLevel;
-  riskReason: string;
-  category: string;
+  riskReason?: string | null;
+  category?: string | null;
 }
 
 /**
@@ -215,7 +215,7 @@ export interface ClausesState {
  */
 export interface Citation {
   quote: string;
-  location: string;
+  location?: string | null;
 }
 
 /**
@@ -236,7 +236,7 @@ export type QuestionConfidence = 'high' | 'medium' | 'low';
  */
 export interface AskResponse {
   answer: string;
-  citations: Citation[];
+  citations?: Citation[] | null;
   confidence: QuestionConfidence;
   notFoundInDocument: boolean;
 }
@@ -262,8 +262,8 @@ export interface ComparisonRow {
   topic: string;
   docA: string;
   docB: string;
-  difference: string;
-  benefitsParty: BenefitsParty;
+  difference?: string | null;
+  benefitsParty?: BenefitsParty | null;
 }
 
 /**
@@ -379,8 +379,8 @@ export type LawyerQuestionCategory =
  */
 export interface LawyerQuestion {
   question: string;
-  whyItMatters: string;
-  category: LawyerQuestionCategory;
+  whyItMatters?: string | null;
+  category?: LawyerQuestionCategory | null;
 }
 
 /**
@@ -402,7 +402,7 @@ export interface LawyerQuestion {
  */
 export interface LawyerPrepResponse {
   questions: LawyerQuestion[];
-  keyDocumentsToBring: string[];
+  keyDocumentsToBring?: string[] | null;
   summaryForLawyer: string;
 }
 
@@ -429,8 +429,8 @@ export type ActionPriority = 'high' | 'medium' | 'low';
 export interface ActionItem {
   step: string;
   priority: ActionPriority;
-  deadline?: string;
-  rationale: string;
+  deadline?: string | null;
+  rationale?: string | null;
 }
 
 /**
@@ -525,7 +525,11 @@ export interface ChecklistState {
  */
 export const CitationSchema = z.object({
   quote: z.string().describe('Direct verbatim quotation from the legal document text'),
-  location: z.string().describe('Clause name, section heading, or paragraph location reference'),
+  location: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Clause name, section heading, or paragraph location reference'),
 });
 
 /**
@@ -535,6 +539,8 @@ export const AskResponseSchema = z.object({
   answer: z.string().describe('Plain-language grounded answer to the user question'),
   citations: z
     .array(CitationSchema)
+    .nullable()
+    .optional()
     .describe('List of exact quoted citations supporting the answer'),
   confidence: z.enum(['high', 'medium', 'low']).describe('Confidence assessment score'),
   notFoundInDocument: z
@@ -549,9 +555,15 @@ export const ComparisonRowSchema = z.object({
   topic: z.string().describe('Legal topic being compared, e.g. Payment, Liability, Termination'),
   docA: z.string().describe('Summary of terms in Document A for this topic'),
   docB: z.string().describe('Summary of terms in Document B for this topic'),
-  difference: z.string().describe('Plain-language explanation of how the two documents differ'),
+  difference: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Plain-language explanation of how the two documents differ'),
   benefitsParty: z
     .enum(['A', 'B', 'both', 'neither'])
+    .nullable()
+    .optional()
     .describe('Which party or document has the more advantageous position'),
 });
 
@@ -570,9 +582,13 @@ export const LawyerQuestionSchema = z.object({
   question: z.string().describe('Targeted question the user should ask a qualified lawyer'),
   whyItMatters: z
     .string()
+    .nullable()
+    .optional()
     .describe('Plain language explanation of why this question is crucial to ask'),
   category: z
     .enum(['rights', 'obligations', 'risks', 'timelines', 'financial', 'termination'])
+    .nullable()
+    .optional()
     .describe('Category of the legal question'),
 });
 
@@ -585,6 +601,8 @@ export const LawyerPrepResponseSchema = z.object({
     .describe('List of 5-8 targeted questions for legal counsel'),
   keyDocumentsToBring: z
     .array(z.string())
+    .nullable()
+    .optional()
     .describe('List of relevant documents, records, or proofs the user should bring'),
   summaryForLawyer: z
     .string()
@@ -599,9 +617,14 @@ export const ActionItemSchema = z.object({
   priority: z.enum(['high', 'medium', 'low']).describe('Priority level: high, medium, or low'),
   deadline: z
     .string()
+    .nullable()
     .optional()
     .describe('Deadline or time window extracted from the document if present'),
-  rationale: z.string().describe('Plain explanation of why this step must be completed'),
+  rationale: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Plain explanation of why this step must be completed'),
 });
 
 /**

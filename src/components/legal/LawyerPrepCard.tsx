@@ -232,10 +232,11 @@ export function LawyerPrepCard({
     if (!prep?.questions?.length) return;
 
     const formattedText = prep.questions
-      .map(
-        (q, index) =>
-          `${index + 1}. [${q.category.toUpperCase()}] ${q.question}\n   Why it matters: ${q.whyItMatters}`
-      )
+      .map((q, index) => {
+        const cat = q.category ? `[${q.category.toUpperCase()}] ` : '';
+        const rationale = q.whyItMatters ? `\n   Why it matters: ${q.whyItMatters}` : '';
+        return `${index + 1}. ${cat}${q.question}${rationale}`;
+      })
       .join('\n\n');
 
     try {
@@ -462,7 +463,7 @@ export function LawyerPrepCard({
 
             <ol className="space-y-3">
               {prep.questions.map((q, idx) => {
-                const config = CATEGORY_MAP[q.category] || CATEGORY_MAP.rights;
+                const config = (q.category && CATEGORY_MAP[q.category]) || CATEGORY_MAP.rights;
                 const CategoryIcon = config.icon;
 
                 return (
@@ -479,12 +480,14 @@ export function LawyerPrepCard({
                           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                             {q.question}
                           </p>
-                          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                            <strong className="text-slate-700 dark:text-slate-300">
-                              Why it matters:{' '}
-                            </strong>
-                            {q.whyItMatters}
-                          </p>
+                          {q.whyItMatters && (
+                            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                              <strong className="text-slate-700 dark:text-slate-300">
+                                Why it matters:{' '}
+                              </strong>
+                              {q.whyItMatters}
+                            </p>
+                          )}
                         </div>
                       </div>
 

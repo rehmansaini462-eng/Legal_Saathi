@@ -58,8 +58,8 @@ export const clauseItemSchema: z.ZodType<ClauseItem> = z.object({
   originalText: z.string(),
   plainExplanation: z.string(),
   riskLevel: clauseRiskLevelSchema,
-  riskReason: z.string(),
-  category: z.string(),
+  riskReason: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
 });
 
 /**

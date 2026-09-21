@@ -59,9 +59,10 @@ CHECKLIST GENERATION CRITERIA:
      * "high": Immediate deadlines, severe penalties, uncapped liabilities, or critical pre-signature negotiation points.
      * "medium": Important milestones, standard compliance steps, or renewal reminders.
      * "low": Routine administrative record-keeping or informational filings.
-   - "deadline": Explicit deadline or time window derived from the document text if present (e.g., "Within 15 days of invoice date", "30 days before anniversary"). If no specific deadline exists, omit or set to null/empty.
+   - "deadline": Explicit deadline or time window derived from the document text if present (e.g., "Within 15 days of invoice date", "30 days before anniversary"). If no specific deadline exists, set deadline: null.
    - "rationale": Plain-language explanation of why this step is essential and what happens if neglected.
-3. Determine "overallUrgency":
+3. For fields that don't apply, use null (not undefined or empty string). For example, if a step has no specific deadline, set deadline: null.
+4. Determine "overallUrgency":
    - "urgent": If the document contains high-risk clauses, imminent deadlines (< 14 days), or severe penalty risks.
    - "soon": If there are moderate timelines or standard action items requiring attention within 30-60 days.
    - "routine": If terms are standard with no immediate high-risk triggers or urgent milestones.
@@ -73,7 +74,7 @@ Return a valid JSON object matching this exact schema:
     {
       "step": "Concrete action step description with clause reference",
       "priority": "high" | "medium" | "low",
-      "deadline": "Extracted timeline or deadline (optional)",
+      "deadline": "Extracted timeline or deadline (or null if none)",
       "rationale": "Plain language rationale for this step"
     }
   ],
