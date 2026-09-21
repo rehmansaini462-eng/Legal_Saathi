@@ -32,8 +32,15 @@ export const ALLOWED_MIME_TYPES: readonly SupportedMimeType[] = [
 export const DISCLAIMER_TEXT =
   'This tool provides legal information, not legal advice. Consult a qualified lawyer for your specific situation.' as const;
 
+/** Model fallback sequence optimized for latency, availability, and structured extraction. */
+export const GEMINI_MODELS = [
+  'gemini-flash-latest',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+] as const;
+
 /** Standard Gemini Generative AI model name optimized for speed, low latency, and structured extraction. */
-export const GEMINI_MODEL = 'gemini-flash-latest' as const;
+export const GEMINI_MODEL = GEMINI_MODELS[0];
 
 /** Timeout threshold in milliseconds for Google Gemini API calls (30 seconds). */
 export const GEMINI_TIMEOUT_MS = 30000 as const;
@@ -50,6 +57,7 @@ export const ERROR_CODES = {
   GEMINI_API_ERROR: 'GEMINI_API_ERROR',
   GEMINI_PARSE_ERROR: 'GEMINI_PARSE_ERROR',
   GEMINI_TIMEOUT: 'GEMINI_TIMEOUT',
+  GEMINI_HIGH_DEMAND: 'GEMINI_HIGH_DEMAND',
 } as const;
 
 /** Union type representing all valid application error code literals. */

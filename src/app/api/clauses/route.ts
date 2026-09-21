@@ -28,6 +28,38 @@ const clausesRequestSchema = z.object({
 });
 
 /**
+ * Helper to identify 503 High Demand service errors.
+ *
+ * @param error - The caught upstream error.
+ * @returns Standardized ApiError if high demand, or null.
+ */
+function getHighDemandError(error: unknown): ApiError | null {
+  const errorMsg = error instanceof Error ? error.message : String(error);
+  const lowerMsg = errorMsg.toLowerCase();
+  const is503 =
+    errorMsg.includes('503') ||
+    lowerMsg.includes('high demand') ||
+    lowerMsg.includes('service unavailable') ||
+    (typeof error === 'object' &&
+      error !== null &&
+      'status' in error &&
+      (error as { status: number }).status === 503) ||
+    (typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code: string }).code === ERROR_CODES.GEMINI_HIGH_DEMAND);
+
+  if (is503) {
+    return {
+      error: 'Our AI service is experiencing high demand. Please try again in 30 seconds.',
+      code: ERROR_CODES.GEMINI_HIGH_DEMAND,
+      status: 503,
+    };
+  }
+  return null;
+}
+
+/**
  * Handles POST requests to extract, categorize, and risk-score clauses from a legal document.
  *
  * @param request - Incoming Next.js HTTP request with a JSON body containing `{ text: string, filename?: string }`.
@@ -80,6 +112,11 @@ export async function POST(
 
     return NextResponse.json({ data: analysisResult }, { status: 200 });
   } catch (error: unknown) {
+    const highDemand = getHighDemandError(error);
+    if (highDemand) {
+      return NextResponse.json(highDemand, { status: 503 });
+    }
+
     if (
       typeof error === 'object' &&
       error !== null &&

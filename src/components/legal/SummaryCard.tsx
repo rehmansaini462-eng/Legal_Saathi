@@ -9,8 +9,9 @@
 
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Sparkles, Copy, Check, AlertCircle, RefreshCw, StopCircle } from 'lucide-react';
+import { ERROR_CODES } from '@/config/constants';
 
 /**
  * Props for the SummaryCard component.
@@ -24,6 +25,7 @@ export interface SummaryCardProps {
 
 /**
  * Interactive summary card component that streams AI-generated plain-language summaries in real-time.
+ * Features automated 503 high-demand retry countdown and manual retry button.
  *
  * @param props - Text and filename of the document to summarize.
  * @returns Accessible SummaryCard component element.
@@ -35,22 +37,53 @@ export function SummaryCard({ text, filename }: SummaryCardProps): React.JSX.Ele
   const [summary, setSummary] = useState<string>('');
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+
   const abortControllerRef = useRef<AbortController | null>(null);
+  const autoRetriedRef = useRef<boolean>(false);
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearCountdown = useCallback(() => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    setRetryCountdown(null);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearCountdown();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [clearCountdown]);
 
   /**
    * Initiates streaming summary generation from the /api/summarize endpoint.
+   *
+   * @param isAutoRetry - Whether this execution was automatically triggered by a countdown.
    */
-  const handleGenerateSummary = async () => {
+  const handleGenerateSummary = async (isAutoRetry = false) => {
+    clearCountdown();
     if (!text || text.trim().length < 10) {
       setError('Document text is too short to generate a summary.');
+      setErrorCode(ERROR_CODES.INVALID_INPUT);
       return;
     }
 
     // Reset previous state
     setError(null);
+    setErrorCode(null);
     setSummary('');
     setIsStreaming(true);
+
+    if (!isAutoRetry) {
+      autoRetriedRef.current = false;
+    }
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -65,12 +98,39 @@ export function SummaryCard({ text, filename }: SummaryCardProps): React.JSX.Ele
 
       if (!response.ok) {
         let errorMsg = `Server error (${response.status})`;
+        let code: string | null = null;
         try {
           const errorData = await response.json();
           if (errorData.error) errorMsg = errorData.error;
+          if (errorData.code) code = errorData.code;
         } catch {
           // fallback to status code message
         }
+
+        if (response.status === 503 || code === ERROR_CODES.GEMINI_HIGH_DEMAND) {
+          setErrorCode(ERROR_CODES.GEMINI_HIGH_DEMAND);
+          setError(
+            errorMsg ||
+              'Our AI service is experiencing high demand. Please try again in 30 seconds.'
+          );
+
+          if (!autoRetriedRef.current) {
+            autoRetriedRef.current = true;
+            let count = 10;
+            setRetryCountdown(count);
+            countdownTimerRef.current = setInterval(() => {
+              count -= 1;
+              if (count <= 0) {
+                clearCountdown();
+                void handleGenerateSummary(true);
+              } else {
+                setRetryCountdown(count);
+              }
+            }, 1000);
+          }
+          return;
+        }
+
         throw new Error(errorMsg);
       }
 
@@ -192,7 +252,7 @@ export function SummaryCard({ text, filename }: SummaryCardProps): React.JSX.Ele
           ) : (
             <button
               type="button"
-              onClick={handleGenerateSummary}
+              onClick={() => handleGenerateSummary(false)}
               className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
               aria-label={summary ? 'Regenerate summary' : 'Generate summary'}
             >
@@ -217,15 +277,41 @@ export function SummaryCard({ text, filename }: SummaryCardProps): React.JSX.Ele
         <div
           role="alert"
           aria-live="assertive"
-          className="m-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-900 dark:border-red-800/60 dark:bg-red-950/40 dark:text-red-200"
+          className="m-5 flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-900 sm:flex-row sm:items-center sm:justify-between dark:border-red-800/60 dark:bg-red-950/40 dark:text-red-200"
         >
-          <AlertCircle
-            className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400"
-            aria-hidden="true"
-          />
-          <div>
-            <p className="font-semibold text-red-950 dark:text-red-100">Summary Generation Error</p>
-            <p className="mt-0.5">{error}</p>
+          <div className="flex items-start gap-3">
+            <AlertCircle
+              className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400"
+              aria-hidden="true"
+            />
+            <div>
+              <p className="font-semibold text-red-950 dark:text-red-100">
+                {errorCode === ERROR_CODES.GEMINI_HIGH_DEMAND
+                  ? 'High Service Demand'
+                  : 'Summary Generation Error'}
+              </p>
+              <p className="mt-0.5">{error}</p>
+              {retryCountdown !== null && retryCountdown > 0 && (
+                <p className="mt-1 font-semibold text-blue-700 dark:text-blue-300">
+                  Retrying in {retryCountdown}s...
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-center">
+            <button
+              type="button"
+              onClick={() => {
+                clearCountdown();
+                autoRetriedRef.current = false;
+                void handleGenerateSummary(false);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-red-800 focus:ring-2 focus:ring-red-500 focus:outline-hidden dark:bg-red-800 dark:hover:bg-red-700"
+              aria-label="Try generating summary again"
+            >
+              <RefreshCw className="h-3 w-3" aria-hidden="true" />
+              <span>Try Again</span>
+            </button>
           </div>
         </div>
       )}
@@ -246,7 +332,7 @@ export function SummaryCard({ text, filename }: SummaryCardProps): React.JSX.Ele
             </p>
             <button
               type="button"
-              onClick={handleGenerateSummary}
+              onClick={() => handleGenerateSummary(false)}
               className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
             >
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
