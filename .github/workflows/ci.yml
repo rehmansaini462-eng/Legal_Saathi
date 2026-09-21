@@ -37,6 +37,9 @@ jobs:
       - name: TypeScript Type Check
         run: npm run type-check
 
+      - name: Unit Tests
+        run: npm run test
+
       - name: Prettier Format Check
         run: npm run format:check
 
