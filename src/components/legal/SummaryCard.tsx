@@ -10,7 +10,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Sparkles, Copy, Check, AlertCircle, RefreshCw, StopCircle } from 'lucide-react';
+import { Sparkles, Copy, Check, RefreshCw, AlertCircle, StopCircle } from 'lucide-react';
+import { SkeletonCard } from './SkeletonCard';
 import { ERROR_CODES } from '@/config/constants';
 import type { SummaryState } from '@/types/legal';
 
@@ -408,7 +409,22 @@ export function SummaryCard({
         )}
 
         {/* Streaming & Result Content Region */}
-        {(summary || isStreaming) && (
+        {isStreaming && !summary && (
+          <div aria-live="polite" aria-busy="true">
+            <SkeletonCard
+              lines={4}
+              showHeader={false}
+              ariaLabel="Generating plain-language summary in real-time"
+              className="border-0 bg-transparent p-0 shadow-none"
+            />
+            <div className="mt-3 flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400">
+              <span className="inline-block h-2 w-2 animate-ping rounded-full bg-blue-600 dark:bg-blue-400" />
+              <span>Initializing Gemini model and streaming summary...</span>
+            </div>
+          </div>
+        )}
+
+        {(summary || (isStreaming && summary)) && (
           <div
             aria-live="polite"
             aria-busy={isStreaming}

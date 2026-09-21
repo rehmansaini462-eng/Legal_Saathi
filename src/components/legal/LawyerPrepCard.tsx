@@ -25,6 +25,7 @@ import {
   UserCheck,
   XCircle,
 } from 'lucide-react';
+import { SkeletonCard } from './SkeletonCard';
 import { ERROR_CODES } from '@/config/constants';
 import type { LawyerPrepState, LawyerQuestionCategory } from '@/types/legal';
 
@@ -366,10 +367,13 @@ export function LawyerPrepCard({
 
       {/* Loading Skeleton */}
       {isLoading && (
-        <div className="mt-6 space-y-4" aria-live="polite">
-          <div className="h-20 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800/60" />
-          <div className="h-28 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800/60" />
-          <div className="h-28 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800/60" />
+        <div className="mt-6 space-y-4" aria-live="polite" aria-busy="true">
+          <SkeletonCard
+            lines={3}
+            showHeader={true}
+            ariaLabel="Generating executive summary for lawyer"
+          />
+          <SkeletonCard lines={4} showHeader={true} ariaLabel="Preparing consultation questions" />
         </div>
       )}
 

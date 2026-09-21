@@ -24,16 +24,37 @@ import {
   Briefcase,
   ListChecks,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { DocumentUploader } from './DocumentUploader';
 import { DocumentPreview } from './DocumentPreview';
 import { SummaryCard } from './SummaryCard';
 import { ClauseList } from './ClauseList';
 import { AskQuestion } from './AskQuestion';
-import { CompareDocuments } from './CompareDocuments';
-import { LawyerPrepCard } from './LawyerPrepCard';
-import { ActionChecklist } from './ActionChecklist';
+import { SkeletonCard } from './SkeletonCard';
 import { RedactPIIPanel } from './RedactPIIPanel';
 import { redactPII } from '@/lib/utils/redact';
+
+// Lazy load heavy client tabs to optimize initial bundle size and boost page load efficiency
+const CompareDocuments = dynamic(
+  () => import('./CompareDocuments').then((mod) => mod.CompareDocuments),
+  {
+    ssr: false,
+    loading: () => <SkeletonCard lines={4} ariaLabel="Loading document comparison tool" />,
+  }
+);
+
+const LawyerPrepCard = dynamic(() => import('./LawyerPrepCard').then((mod) => mod.LawyerPrepCard), {
+  ssr: false,
+  loading: () => <SkeletonCard lines={4} ariaLabel="Loading lawyer consultation preparation" />,
+});
+
+const ActionChecklist = dynamic(
+  () => import('./ActionChecklist').then((mod) => mod.ActionChecklist),
+  {
+    ssr: false,
+    loading: () => <SkeletonCard lines={4} ariaLabel="Loading action checklist tool" />,
+  }
+);
 import type {
   ApiError,
   ParsedDocument,

@@ -15,6 +15,7 @@ import {
   LawyerPrepResponseSchema,
   SAFETY_INSTRUCTIONS,
 } from '@/lib/prompts';
+import { rateLimit, getClientIp } from '@/lib/utils/rateLimit';
 import {
   LawyerPrepRequestSchema,
   type ApiError,
@@ -76,6 +77,23 @@ function getHighDemandError(error: unknown): ApiError | null {
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ApiResponse<LawyerPrepResponse>>> {
+  // Enforce IP-based rate limiting
+  const clientIp = getClientIp(request);
+  const limiter = rateLimit(clientIp);
+  if (!limiter.allowed) {
+    const rateLimitError: ApiError = {
+      error: 'Too many requests. Please wait a moment.',
+      code: ERROR_CODES.RATE_LIMITED,
+      status: 429,
+    };
+    return NextResponse.json(rateLimitError, {
+      status: 429,
+      headers: {
+        'Retry-After': Math.max(1, Math.ceil((limiter.resetAt - Date.now()) / 1000)).toString(),
+      },
+    });
+  }
+
   let jsonBody: unknown;
 
   try {

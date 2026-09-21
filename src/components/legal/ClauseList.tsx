@@ -19,6 +19,7 @@ import {
   Tag,
   AlertCircle,
 } from 'lucide-react';
+import { SkeletonCard } from './SkeletonCard';
 import { ERROR_CODES } from '@/config/constants';
 import type { ClauseAnalysisResult, ClauseRiskLevel, ClausesState } from '@/types/legal';
 
@@ -338,6 +339,18 @@ export function ClauseList({
           </div>
         )}
 
+        {/* Loading Skeleton during Analysis */}
+        {isLoading && (
+          <div aria-live="polite" aria-busy="true" className="space-y-4">
+            <SkeletonCard
+              lines={4}
+              showHeader={true}
+              ariaLabel="Extracting and analyzing legal clauses"
+            />
+            <SkeletonCard lines={3} showHeader={true} ariaLabel="Evaluating clause risk levels" />
+          </div>
+        )}
+
         {clauses.length === 0 && !isLoading && !error && (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 py-12 text-center dark:border-zinc-800 dark:bg-zinc-950/30">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
@@ -363,7 +376,7 @@ export function ClauseList({
         )}
 
         {/* Risk Metrics Summary Strip */}
-        {clauses.length > 0 && (
+        {clauses.length > 0 && !isLoading && (
           <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-center dark:border-zinc-800 dark:bg-zinc-900/60">
               <span className="block text-xl font-extrabold text-zinc-900 dark:text-zinc-100">
@@ -401,7 +414,7 @@ export function ClauseList({
         )}
 
         {/* Clause Cards List */}
-        {clauses.length > 0 && (
+        {clauses.length > 0 && !isLoading && (
           <div className="space-y-4">
             {clauses.map((clause, idx) => {
               const elementId = clause.id || `clause-${idx + 1}`;

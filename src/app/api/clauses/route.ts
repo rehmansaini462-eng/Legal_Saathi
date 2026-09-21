@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { ERROR_CODES } from '@/config/constants';
 import { generateJSON } from '@/lib/gemini';
 import { buildClausesPrompt, ClausesResponseSchema, SAFETY_INSTRUCTIONS } from '@/lib/prompts';
+import { rateLimit, getClientIp } from '@/lib/utils/rateLimit';
 import type { ApiError, ApiResponse, ClauseAnalysisResult } from '@/types/legal';
 
 export const runtime = 'nodejs';
@@ -79,6 +80,23 @@ function getHighDemandError(error: unknown): ApiError | null {
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ApiResponse<ClauseAnalysisResult>>> {
+  // Enforce IP-based rate limiting
+  const clientIp = getClientIp(request);
+  const limiter = rateLimit(clientIp);
+  if (!limiter.allowed) {
+    const rateLimitError: ApiError = {
+      error: 'Too many requests. Please wait a moment.',
+      code: ERROR_CODES.RATE_LIMITED,
+      status: 429,
+    };
+    return NextResponse.json(rateLimitError, {
+      status: 429,
+      headers: {
+        'Retry-After': Math.max(1, Math.ceil((limiter.resetAt - Date.now()) / 1000)).toString(),
+      },
+    });
+  }
+
   let jsonBody: unknown;
 
   try {

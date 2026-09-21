@@ -20,7 +20,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { APP_NAME, APP_TAGLINE } from '@/config/constants';
-import { LegalWorkspace, DisclaimerBanner } from '@/components/legal';
+import { LegalWorkspace, DisclaimerBanner, ThemeToggle } from '@/components/legal';
 
 /**
  * Feature card specification for upcoming capabilities.
@@ -123,11 +123,12 @@ export default function HomePage(): React.JSX.Element {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
               <Award className="h-3.5 w-3.5" aria-hidden="true" />
               Built for H25
             </span>
+            <ThemeToggle />
           </div>
         </div>
       </header>

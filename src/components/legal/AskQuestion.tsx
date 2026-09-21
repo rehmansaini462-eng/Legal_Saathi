@@ -22,6 +22,7 @@ import {
   Loader2,
   Trash2,
 } from 'lucide-react';
+import { SkeletonCard } from './SkeletonCard';
 import { ERROR_CODES } from '@/config/constants';
 import type { AskState, AskResponse, QuestionConfidence } from '@/types/legal';
 
@@ -483,9 +484,16 @@ export function AskQuestion({
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-2 py-2 text-xs text-zinc-500 dark:text-zinc-400">
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" aria-hidden="true" />
-                  <span>Analyzing document text and extracting citations...</span>
+                <div aria-live="polite" aria-busy="true" className="py-2">
+                  <SkeletonCard
+                    lines={3}
+                    showHeader={false}
+                    ariaLabel="Analyzing document text and extracting citations"
+                    className="border-0 bg-transparent p-0 shadow-none"
+                  />
+                  <p className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400">
+                    Analyzing document text and extracting grounded citations...
+                  </p>
                 </div>
               )}
             </div>

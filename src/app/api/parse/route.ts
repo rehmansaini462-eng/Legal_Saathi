@@ -10,6 +10,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { ERROR_CODES } from '@/config/constants';
 import { isApiError, parseDocument } from '@/lib/parser';
+import { rateLimit, getClientIp } from '@/lib/utils/rateLimit';
 import type { ApiError, ApiResponse, ParsedDocument } from '@/types/legal';
 
 export const runtime = 'nodejs';
@@ -26,11 +27,28 @@ export const runtime = 'nodejs';
  *   const res = await fetch('/api/parse', { method: 'POST', body: formData });
  *   const data = await res.json();
  * @alignsWith Problem Statement: "Helping users understand their options and potential next steps"
- * @security Sanitizes all error outputs ensuring internal traces or system paths are never exposed.
+ * @security Sanitizes all error outputs ensuring internal traces or system paths are never exposed and throttles via rate limiting.
  */
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ApiResponse<ParsedDocument>>> {
+  // Enforce IP-based rate limiting to protect parser resources from DoS
+  const clientIp = getClientIp(request);
+  const limiter = rateLimit(clientIp);
+  if (!limiter.allowed) {
+    const rateLimitError: ApiError = {
+      error: 'Too many requests. Please wait a moment.',
+      code: ERROR_CODES.RATE_LIMITED,
+      status: 429,
+    };
+    return NextResponse.json(rateLimitError, {
+      status: 429,
+      headers: {
+        'Retry-After': Math.max(1, Math.ceil((limiter.resetAt - Date.now()) / 1000)).toString(),
+      },
+    });
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file');

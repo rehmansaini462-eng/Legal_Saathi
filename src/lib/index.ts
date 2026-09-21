@@ -16,3 +16,6 @@ export {
   cleanJsonFence,
 } from './gemini';
 export * from './prompts';
+export { rateLimit, getClientIp, resetRateLimit } from './utils/rateLimit';
+export { redactPII } from './utils/redact';
+export * from './utils/storage';

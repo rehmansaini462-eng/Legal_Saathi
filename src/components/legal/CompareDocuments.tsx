@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Award,
 } from 'lucide-react';
+import { SkeletonCard } from './SkeletonCard';
 import { ERROR_CODES } from '@/config/constants';
 import type { CompareState, ComparisonResponse, BenefitsParty } from '@/types/legal';
 
@@ -303,8 +304,24 @@ export function CompareDocuments({
         </div>
       )}
 
+      {/* Loading Skeleton */}
+      {isLoading && (
+        <div aria-live="polite" aria-busy="true" className="mt-6 space-y-4">
+          <SkeletonCard
+            lines={3}
+            showHeader={true}
+            ariaLabel="Generating executive comparison takeaway"
+          />
+          <SkeletonCard
+            lines={5}
+            showHeader={false}
+            ariaLabel="Constructing topic-by-topic comparison matrix"
+          />
+        </div>
+      )}
+
       {/* Comparison Content Region */}
-      {comparison && (
+      {comparison && !isLoading && (
         <div className="mt-6 space-y-6">
           {/* Executive Summary Card */}
           <div className="rounded-xl border border-purple-200 bg-purple-50/60 p-5 dark:border-purple-900/40 dark:bg-purple-950/30">

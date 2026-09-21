@@ -58,6 +58,7 @@ export const ERROR_CODES = {
   GEMINI_PARSE_ERROR: 'GEMINI_PARSE_ERROR',
   GEMINI_TIMEOUT: 'GEMINI_TIMEOUT',
   GEMINI_HIGH_DEMAND: 'GEMINI_HIGH_DEMAND',
+  RATE_LIMITED: 'RATE_LIMITED',
 } as const;
 
 /** Union type representing all valid application error code literals. */

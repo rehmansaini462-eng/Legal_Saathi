@@ -7,7 +7,7 @@
 > complex legal documents, highlighting important clauses and risks,
 > and preparing users for conversations with legal professionals.
 
-LegalSaathi is an AI-powered legal document comprehension and analysis assistant designed to simplify dense legal contracts and empower citizens with accessible legal intelligence.
+LegalSaathi is an enterprise-grade AI-powered legal document comprehension and analysis assistant designed to simplify dense legal contracts and empower citizens with accessible legal intelligence.
 
 ---
 
@@ -15,6 +15,7 @@ LegalSaathi is an AI-powered legal document comprehension and analysis assistant
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict-3178C6.svg)](#)
+[![Accessibility: WCAG 2.1 AA](https://img.shields.io/badge/Accessibility-WCAG_2.1_AA-success.svg)](#accessibility)
 
 ---
 
@@ -41,6 +42,45 @@ LegalSaathi bridges the gap between complex legal documents and everyday underst
 - **Risk & Red-Flag Detection**: Identifies one-sided terms, ambiguous penalty calculations, and compliance anomalies.
 - **Interactive Q&A Companion**: Enables users to ask natural-language questions directly against their uploaded documents using grounded RAG.
 - **Contract Comparison**: Compares contract revisions side-by-side to highlight material alterations before signing.
+- **Lawyer Preparation**: Equips non-lawyers with targeted consultation questions, documents-to-bring checklists, and executive case summaries.
+- **Action Checklist**: Derives prioritized next steps and contract deadlines with interactive completion tracking.
+- **Privacy-First PII Redaction**: Client-side masking of Aadhaar, PAN, phone numbers, emails, and bank accounts before AI processing.
+
+---
+
+## Screenshots
+
+### Landing Page
+
+![Landing Page](docs/screenshots/01-landing.png)
+
+### Document Preview
+
+![Preview](docs/screenshots/02-preview.png)
+
+### AI Summary
+
+![Summary](docs/screenshots/03-summary.png)
+
+### Clause Risk Analysis
+
+![Clauses](docs/screenshots/04-clauses.png)
+
+### Q&A with Citations
+
+![Q&A](docs/screenshots/05-qa.png)
+
+### Document Comparison
+
+![Compare](docs/screenshots/06-compare.png)
+
+### Lawyer Preparation
+
+![Lawyer Prep](docs/screenshots/07-lawyer-prep.png)
+
+### Action Checklist
+
+![Checklist](docs/screenshots/08-checklist.png)
 
 ---
 
@@ -49,15 +89,16 @@ LegalSaathi bridges the gap between complex legal documents and everyday underst
 - [x] Multi-format document ingestion (PDF, DOCX, TXT up to 10MB)
 - [x] In-memory document parsing and sanitization pipeline
 - [x] Accessible WCAG 2.1 AA compliant UI with screen reader announcements
-- [x] Plain-language clause-by-clause breakdown
-- [x] Executive summary generation with key takeaways
-- [x] Critical risk and red-flag scoring
+- [x] Plain-language streaming summary generation with executive takeaways
+- [x] Critical risk and red-flag scoring across liabilities, penalties, and termination
 - [x] Grounded document question answering with verbatim citations (RAG)
-- [x] Side-by-side contract comparison matrix with party favorability
+- [x] Side-by-side contract comparison matrix with party favorability analysis
 - [x] Lawyer Preparation (questions to ask, documents to bring, summary to share)
 - [x] Action Checklist with priorities, deadlines, and task tracking
 - [x] Client-side PII Redaction (privacy-first: Aadhaar, PAN, emails, phones, accounts)
-- [x] Responsive, accessible design with dark mode and persistent session storage
+- [x] Dark mode support with 3-state switcher (Light / Dark / System)
+- [x] Resilient error boundaries and pulsing skeleton loading states
+- [x] In-memory rate limiting and enterprise Content Security Policy (CSP)
 
 ---
 
@@ -68,7 +109,7 @@ LegalSaathi bridges the gap between complex legal documents and everyday underst
 | **Framework**     | Next.js (App Router)      | Full-stack React framework with SSR and API routes         |
 | **Language**      | TypeScript (Ultra-Strict) | Type safety, maintainability, zero `any` policy            |
 | **Styling**       | Tailwind CSS              | Modern, responsive, utility-first design system            |
-| **UI Components** | shadcn/ui & Lucide Icons  | Accessible, high-aesthetic component library               |
+| **UI Components** | Lucide Icons              | Accessible, high-aesthetic component library               |
 | **Generative AI** | Google Gemini API         | Structured clause extraction, summarization, and reasoning |
 | **Validation**    | Zod                       | Runtime schema validation for env vars and API payloads    |
 | **Testing**       | Vitest & Testing Library  | Fast unit testing for parser and security boundaries       |
@@ -79,16 +120,55 @@ LegalSaathi bridges the gap between complex legal documents and everyday underst
 ## Architecture
 
 ```
-[User / Browser]
-       │
-       ▼ (Client-Side PII Masking: redactPII)
-[Next.js Server API: /api/parse, /api/summarize, /api/clauses, /api/ask, /api/compare, /api/lawyer-prep, /api/checklist]
-       │
-       ├─► MIME Type & Size Validation (10MB Limit)
-       ├─► In-Memory Buffer Extraction (pdf-parse / mammoth)
-       ├─► Text Sanitization & Anti-Injection Guardrails
-       └─► Returns Strongly-Typed Schema-Validated JSON
+User Browser
+    ↓
+[Document Uploader] → /api/parse → Parser (PDF/DOCX/TXT)
+    ↓
+[LegalWorkspace with Tabs]
+    ├── Document Preview
+    ├── AI Summary → /api/summarize → Gemini (streaming)
+    ├── Clause Risk Analysis → /api/clauses → Gemini (JSON)
+    ├── Ask Questions → /api/ask → Gemini (grounded)
+    ├── Prepare for Lawyer → /api/lawyer-prep → Gemini
+    └── Action Checklist → /api/checklist → Gemini
+
+Cross-cutting:
+- Guardrails (anti-hallucination)
+- Retry with exponential backoff
+- Multi-model fallback
+- Client-side PII redaction
+- SessionStorage persistence
+- Rate limiting
+- Error boundaries
 ```
+
+---
+
+## Accessibility
+
+LegalSaathi is built from the ground up for full **WCAG 2.1 AA** compliance:
+
+- [x] **Semantic HTML5**: Semantic landmarks (`<main>`, `<section>`, `<header>`, `<footer>`, `<article>`).
+- [x] **Keyboard Navigation**: Skip-to-content anchor, strict tab order, focus-visible styling rings (`outline-none focus:ring-2 focus:ring-blue-500`).
+- [x] **Screen Reader Support**: ARIA live regions (`aria-live="polite"`, `aria-live="assertive"`), descriptive `aria-label`, and `aria-busy` attributes during streaming and loading.
+- [x] **Heading Hierarchy**: Strict `h1 -> h2 -> h3 -> h4` hierarchy with zero skipped levels.
+- [x] **Color Contrast**: 4.5:1+ text contrast ratio across both Light and Dark themes.
+- [x] **Dark Mode**: High-contrast dark theme with 3-state toggle and `prefers-color-scheme` support.
+- [x] **Reduced Motion**: Graceful pulsing and spin indicators compatible with user motion preferences.
+
+---
+
+## Privacy & Security
+
+LegalSaathi adheres to a privacy-first, zero-trust security architecture:
+
+- **Client-Side PII Redaction**: Redacts sensitive identity markers (Aadhaar, PAN, emails, phone numbers, bank accounts) entirely in the browser before sending data to AI endpoints.
+- **No PII Logging**: Server handlers never log document bodies, filenames, or user queries to external services.
+- **In-Memory File Processing**: File uploads are processed in ephemeral server memory buffers; files are never written to disk or permanent databases.
+- **Strict MIME & Size Whitelist**: Rejects invalid file types and enforces a strict 10MB file size limit.
+- **In-Memory Rate Limiting**: Sliding-window rate limiter (10 requests/60s per IP) on all API endpoints to protect against DoS attacks.
+- **Enterprise Security Headers**: Strict Content Security Policy (`CSP`), `HSTS` (63072000s with preload), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Cross-Origin-Opener-Policy: same-origin`, and `Permissions-Policy`.
+- **Environment Validation**: Zod-enforced environment variable validation failing fast on misconfigurations.
 
 ---
 
@@ -156,17 +236,26 @@ npm run test
 
 # Production build verification
 npm run build
+
+# Analyze production bundle size
+npm run analyze
 ```
 
 ---
 
 ## Deployment
 
-LegalSaathi is optimized for one-click deployment on [Vercel](https://vercel.com):
+LegalSaathi is fully optimized for one-click deployment on [Vercel](https://vercel.com):
 
-1. Import the repository into your Vercel Dashboard.
-2. Configure the environment variables (`GEMINI_API_KEY`, `NEXT_PUBLIC_APP_URL`).
-3. Deploy! Vercel automatically runs the build pipeline and provides edge CDN caching.
+1. **Import Repository**: Import the LegalSaathi repository into your Vercel dashboard.
+2. **Set Environment Variables**:
+   - `GEMINI_API_KEY`: Your production Google Gemini API key.
+   - `NEXT_PUBLIC_APP_URL`: Your deployed Vercel domain (e.g. `https://legalsaathi.vercel.app`).
+3. **Deploy**: Vercel automatically runs `npm run build` and distributes the application globally across edge networks.
+4. **Post-Deploy Verification**:
+   - Upload sample NDA or lease document.
+   - Verify summary streaming, clause risk extraction, Q&A citations, and lawyer prep generation.
+   - Test dark mode switcher and responsive layout across mobile and desktop viewports.
 
 ---
 
@@ -176,6 +265,7 @@ LegalSaathi is optimized for one-click deployment on [Vercel](https://vercel.com
 - [x] **Day 2: Plain-Language AI Summarization & Clause Risk Engine** — Streaming plain-language summary with executive takeaways, clause risk scoring (high/medium/low), and multi-model retry/fallback chain.
 - [x] **Day 3: Grounded Q&A with Citations & Contract Comparison Matrix** — Interactive document Q&A with exact quoted citations, side-by-side contract comparison matrix, and party favorability analysis.
 - [x] **Day 4: Lawyer Preparation, Action Checklist & Privacy-First PII Redaction** — Structured consultation questions, documents-to-bring checklist, case briefings, actionable next-steps checklist with deadlines, and zero-trust client-side PII redaction.
+- [x] **Day 5: Production Polish, Accessibility & Security Hardening** — React error boundaries (root + segment), loading skeletons, full CSP and security headers, in-memory rate limiting, 3-state dark mode toggle, next/dynamic lazy loading, and bundle analyzer.
 
 ---
 
@@ -184,10 +274,10 @@ LegalSaathi is optimized for one-click deployment on [Vercel](https://vercel.com
 | Criteria                        | Our Implementation                                                                                                                                                                                                                                                                                         |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Code Quality**                | Strict TypeScript (no any), ESLint 0-warnings, Prettier via Husky, JSDoc with @param/@returns/@throws/@example on every export, modular architecture (types/, lib/, components/legal/), barrel exports, conventional commits                                                                               |
-| **Security**                    | Zod env validation, MIME whitelist (PDF/DOCX/TXT only), 10MB size cap, 100K char comparison limit, in-memory parsing (no disk writes), no stack trace leakage, CSP-lite security headers, .env isolation, server-only route handlers, client-side PII redaction (Aadhaar/PAN/Phone/Email masking)          |
-| **Efficiency**                  | Next.js 16 Turbopack, React Server Components, streaming-ready architecture, minimal client bundle, serverExternalPackages for native modules                                                                                                                                                              |
-| **Testing**                     | Vitest unit tests with criteria-tagged describe blocks (Security / Problem Alignment / Code Quality), CI on every push (lint + type-check + format + build)                                                                                                                                                |
-| **Accessibility**               | Semantic HTML5 (main, section, header, footer), ARIA labels & roles on all interactive elements, aria-live for async status, keyboard navigation, focus-visible rings, skip-to-content link, WCAG AA contrast, screen-reader-tested heading hierarchy                                                      |
+| **Security**                    | Zod env validation, MIME whitelist (PDF/DOCX/TXT only), 10MB size cap, 100K char comparison limit, in-memory parsing (no disk writes), no stack trace leakage, full Content Security Policy (CSP), HSTS, in-memory rate limiting (429), client-side PII redaction (Aadhaar/PAN/Phone/Email masking)        |
+| **Efficiency**                  | Next.js 16 Turbopack, React Server Components, next/dynamic lazy loading on heavy tabs, streaming-ready architecture, minimal client bundle, bundle analyzer script, serverExternalPackages for native modules                                                                                             |
+| **Testing**                     | Vitest unit tests with criteria-tagged describe blocks (Security / Problem Alignment / Code Quality / Reliability / Efficiency), CI on every push (lint + type-check + format + build)                                                                                                                     |
+| **Accessibility**               | Semantic HTML5 (main, section, header, footer), ARIA labels & roles on all interactive elements, aria-live for async status, keyboard navigation, focus-visible rings, skip-to-content link, WCAG AA contrast, dark mode toggle, screen-reader-tested heading hierarchy                                    |
 | **Problem Statement Alignment** | Directly implements all four H25 potential use cases: summarizing complex documents, answering questions with clause citations, comparing contracts side-by-side, supporting lawyer preparation (questions + documents list), generating actionable checklists, and including privacy-first PII redaction. |
 
 ---

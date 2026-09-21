@@ -20,6 +20,7 @@ import {
   Flame,
   CheckCircle2,
 } from 'lucide-react';
+import { SkeletonCard } from './SkeletonCard';
 import { ERROR_CODES } from '@/config/constants';
 import type { ChecklistState, ActionPriority, ChecklistUrgency } from '@/types/legal';
 
@@ -370,10 +371,17 @@ export function ActionChecklist({
 
       {/* Loading Skeleton */}
       {isLoading && (
-        <div className="mt-6 space-y-4" aria-live="polite">
-          <div className="h-14 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800/60" />
-          <div className="h-24 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800/60" />
-          <div className="h-24 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800/60" />
+        <div className="mt-6 space-y-4" aria-live="polite" aria-busy="true">
+          <SkeletonCard
+            lines={2}
+            showHeader={true}
+            ariaLabel="Assessing overall contract urgency"
+          />
+          <SkeletonCard
+            lines={4}
+            showHeader={false}
+            ariaLabel="Extracting actionable next steps and deadlines"
+          />
         </div>
       )}
 
