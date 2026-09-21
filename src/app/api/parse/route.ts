@@ -1,5 +1,10 @@
 /**
- * API route handler for uploading and parsing legal documents (PDF, DOCX, TXT).
+ * @module app/api/parse/route
+ * @description POST /api/parse — multipart upload endpoint for LegalSaathi — a GenAI legal assistant that helps non-lawyers understand contracts, agreements, and policies.
+ * @responsibility Validates incoming multipart HTTP requests, routes documents to the parser engine, and returns structured JSON responses.
+ * @alignsWith Problem Statement: "Helping users understand their options and potential next steps"
+ * @qualityTier production — full JSDoc, typed errors, unit-tested
+ * @security No stack traces or filesystem paths leaked to client
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -10,10 +15,18 @@ import type { ApiError, ApiResponse, ParsedDocument } from '@/types/legal';
 export const runtime = 'nodejs';
 
 /**
- * Handles multipart/form-data document upload and returns parsed text and metadata.
+ * Handles multipart/form-data document upload and returns extracted text and metadata.
  *
- * @param request - Incoming Next.js HTTP request containing multipart/form-data.
- * @returns JSON response conforming to ApiResponse<ParsedDocument>.
+ * @param request - Incoming Next.js HTTP request containing a multipart/form-data payload with a 'file' field.
+ * @returns NextResponse containing ApiResponse<ParsedDocument> with extracted text or structured ApiError.
+ * @example
+ *   // Client-side call:
+ *   const formData = new FormData();
+ *   formData.append('file', file);
+ *   const res = await fetch('/api/parse', { method: 'POST', body: formData });
+ *   const data = await res.json();
+ * @alignsWith Problem Statement: "Helping users understand their options and potential next steps"
+ * @security Sanitizes all error outputs ensuring internal traces or system paths are never exposed.
  */
 export async function POST(
   request: NextRequest
