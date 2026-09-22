@@ -19,8 +19,18 @@ import {
   ListChecks,
   ShieldCheck,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { APP_NAME, APP_TAGLINE } from '@/config/constants';
-import { LegalWorkspace, DisclaimerBanner, ThemeToggle } from '@/components/legal';
+import { LegalWorkspace, DisclaimerBanner } from '@/components/legal';
+
+const ThemeToggle = dynamic(() => import('@/components/legal').then((mod) => mod.ThemeToggle), {
+  loading: () => (
+    <div
+      className="h-8 w-24 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800"
+      aria-hidden="true"
+    />
+  ),
+});
 
 /**
  * Feature card specification for upcoming capabilities.

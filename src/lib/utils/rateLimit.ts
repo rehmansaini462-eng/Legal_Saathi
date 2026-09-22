@@ -5,6 +5,7 @@
  * @responsibility Tracks request timestamps per key, purges expired entries, and enforces request quotas.
  * @alignsWith Problem Statement: "Simplifying complex legal documents"
  * @security In-memory rate limiting is per-instance. For production multi-server or serverless deployments, use distributed stores like Redis or Upstash. This serves as an essential basic DoS deterrent and cost guard.
+ * @productionRecommendation For multi-region enterprise serverless deployments, migrate sliding-window state to `@upstash/ratelimit` backed by Upstash Redis.
  * @qualityTier production — full JSDoc, strict TypeScript, zero warnings
  */
 

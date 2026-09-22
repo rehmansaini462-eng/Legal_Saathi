@@ -52,27 +52,27 @@ LegalSaathi bridges the gap between complex legal documents and everyday underst
 
 ### Landing Page with Uploaded Document
 
-![Landing Page with Uploaded Document](public/screenshots/01-landing-uploaded.png)
+![Landing Page with Uploaded Document](public/screenshots/01-landing-uploaded.webp)
 _Document uploader with parsed PDF preview, mode switcher (Single Document / Compare Contracts), and 7 capability cards marked Active._
 
 ### AI Summary — Plain Language with Clause Citations
 
-![AI Summary](public/screenshots/02-ai-summary.png)
+![AI Summary](public/screenshots/02-ai-summary.webp)
 _Streaming plain-language summary grounded in the document, with clause-level citations like [Clause 1.1] and structured sections (Purpose, Rights & Obligations, Deadlines)._
 
 ### Clause Risk Analysis
 
-![Clause Risk Analysis](public/screenshots/03-clause-risks.png)
+![Clause Risk Analysis](public/screenshots/03-clause-risks.webp)
 _Automated clause extraction with risk levels (high/medium/low), plain explanations, risk reasoning, and collapsible verbatim source text._
 
 ### Q&A with Citations
 
-![Q&A with Citations](public/screenshots/04-qa-citations.png)
+![Q&A with Citations](public/screenshots/04-qa-citations.webp)
 _Grounded Q&A — every answer includes quoted source citations and a confidence indicator, never fabricating content not in the document._
 
 ### Lawyer Preparation
 
-![Lawyer Preparation](public/screenshots/05-lawyer-prep.png)
+![Lawyer Preparation](public/screenshots/05-lawyer-prep.webp)
 _Categorized questions to ask a qualified lawyer, documents to bring, and a briefing summary for the consultation._
 
 ---
@@ -91,22 +91,37 @@ _Categorized questions to ask a qualified lawyer, documents to bring, and a brie
 - [x] Client-side PII Redaction (privacy-first: Aadhaar, PAN, emails, phones, accounts)
 - [x] Dark mode support with 3-state switcher (Light / Dark / System)
 - [x] Resilient error boundaries and pulsing skeleton loading states
-- [x] In-memory rate limiting and enterprise Content Security Policy (CSP)
+- [x] In-memory rate limiting and enterprise security headers
 
 ---
 
 ## Tech Stack
 
-| Layer             | Technology                | Purpose                                                    |
-| :---------------- | :------------------------ | :--------------------------------------------------------- |
-| **Framework**     | Next.js (App Router)      | Full-stack React framework with SSR and API routes         |
-| **Language**      | TypeScript (Ultra-Strict) | Type safety, maintainability, zero `any` policy            |
-| **Styling**       | Tailwind CSS              | Modern, responsive, utility-first design system            |
-| **UI Components** | Lucide Icons              | Accessible, high-aesthetic component library               |
-| **Generative AI** | Google Gemini API         | Structured clause extraction, summarization, and reasoning |
-| **Validation**    | Zod                       | Runtime schema validation for env vars and API payloads    |
-| **Testing**       | Vitest & Testing Library  | Fast unit testing for parser and security boundaries       |
-| **Deployment**    | Vercel                    | Production edge hosting with automated CI/CD               |
+| Layer             | Technology              | Purpose                                                    |
+| :---------------- | :---------------------- | :--------------------------------------------------------- |
+| **Framework**     | Next.js 16 (App Router) | React Server Components, server actions, dynamic routing   |
+| **AI / LLM**      | Google Gemini 2.5 Flash | Fast, grounded comprehension, summarization, and reasoning |
+| **Styling**       | Tailwind CSS v4         | Fluid responsive design, dark mode, accessible themes      |
+| **Parsing**       | `pdf-parse`, `mammoth`  | Clean in-memory parsing of PDF, DOCX, and TXT files        |
+| **Validation**    | Zod 4                   | Type-safe runtime schema validation for LLM inputs/outputs |
+| **Icons**         | Lucide React            | Accessible, light-weight semantic icons                    |
+| **Quality/Tests** | Vitest, ESLint 9, Husky | Strict unit tests, zero-warning linter, formatting checks  |
+
+---
+
+## Production Roadmap & Scalability
+
+As LegalSaathi scales from single-region edge deployments to high-traffic distributed environments:
+
+1. **Distributed Rate Limiting (Redis / Upstash)**:
+   - Current: Lightweight in-memory sliding-window limiter protecting per-instance compute and LLM quotas.
+   - Production Target: Seamless drop-in migration to `@upstash/ratelimit` with Upstash Redis or AWS ElastiCache for globally synchronized sliding windows across all serverless regions.
+
+2. **OCR Integration for Scanned Documents**:
+   - Tesseract.js / Google Cloud Vision OCR pipeline for scanned non-searchable PDF contracts.
+
+3. **Multilingual Regional Indian Languages**:
+   - Plain-language translation and voice output across Hindi, Marathi, Bengali, Tamil, Telugu, and Kannada.
 
 ---
 
@@ -267,14 +282,14 @@ LegalSaathi is fully optimized for one-click deployment on [Vercel](https://verc
 
 ## Hackathon Evaluation Alignment
 
-| Criteria                        | Our Implementation                                                                                                                                                                                                                                                                                         |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Code Quality**                | Strict TypeScript (no any), ESLint 0-warnings, Prettier via Husky, JSDoc with @param/@returns/@throws/@example on every export, modular architecture (types/, lib/, components/legal/), barrel exports, conventional commits                                                                               |
-| **Security**                    | Zod env validation, MIME whitelist (PDF/DOCX/TXT only), 10MB size cap, 100K char comparison limit, in-memory parsing (no disk writes), no stack trace leakage, full Content Security Policy (CSP), HSTS, in-memory rate limiting (429), client-side PII redaction (Aadhaar/PAN/Phone/Email masking)        |
-| **Efficiency**                  | Next.js 16 Turbopack, React Server Components, next/dynamic lazy loading on heavy tabs, streaming-ready architecture, minimal client bundle, bundle analyzer script, serverExternalPackages for native modules                                                                                             |
-| **Testing**                     | Vitest unit tests with criteria-tagged describe blocks (Security / Problem Alignment / Code Quality / Reliability / Efficiency), CI on every push (lint + type-check + format + build)                                                                                                                     |
-| **Accessibility**               | Semantic HTML5 (main, section, header, footer), ARIA labels & roles on all interactive elements, aria-live for async status, keyboard navigation, focus-visible rings, skip-to-content link, WCAG AA contrast, dark mode toggle, screen-reader-tested heading hierarchy                                    |
-| **Problem Statement Alignment** | Directly implements all four H25 potential use cases: summarizing complex documents, answering questions with clause citations, comparing contracts side-by-side, supporting lawyer preparation (questions + documents list), generating actionable checklists, and including privacy-first PII redaction. |
+| Criteria                        | Our Implementation                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Code Quality**                | Strict TypeScript (no any), ESLint 0-warnings, Prettier via Husky, JSDoc with @param/@returns/@throws/@example on every export, modular architecture (types/, lib/, components/legal/), barrel exports, conventional commits                                                                                                             |
+| **Security**                    | Zod env validation, MIME whitelist (PDF/DOCX/TXT only), 10MB size cap, 100K char comparison limit, in-memory parsing (no disk writes), no stack trace leakage, enterprise security headers (HSTS, frame guard, CORP, cross-origin isolation), in-memory rate limiting (429), client-side PII redaction (Aadhaar/PAN/Phone/Email masking) |
+| **Efficiency**                  | Next.js 16 Turbopack, React Server Components, next/dynamic lazy loading on heavy tabs, streaming-ready architecture, minimal client bundle, bundle analyzer script, serverExternalPackages for native modules                                                                                                                           |
+| **Testing**                     | Vitest unit tests with criteria-tagged describe blocks (Security / Problem Alignment / Code Quality / Reliability / Efficiency), CI on every push (lint + type-check + format + build)                                                                                                                                                   |
+| **Accessibility**               | Semantic HTML5 (main, section, header, footer), ARIA labels & roles on all interactive elements, aria-live for async status, keyboard navigation, focus-visible rings, skip-to-content link, WCAG AA contrast, dark mode toggle, screen-reader-tested heading hierarchy                                                                  |
+| **Problem Statement Alignment** | Directly implements all four H25 potential use cases: summarizing complex documents, answering questions with clause citations, comparing contracts side-by-side, supporting lawyer preparation (questions + documents list), generating actionable checklists, and including privacy-first PII redaction.                               |
 
 ---
 
