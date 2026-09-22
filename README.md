@@ -52,27 +52,27 @@ LegalSaathi bridges the gap between complex legal documents and everyday underst
 
 ### Landing Page with Uploaded Document
 
-![Landing Page with Uploaded Document](public/screenshots/01-landing-uploaded.webp)
+![Landing Page with Uploaded Document](public/screenshots/01-landing-uploaded.png)
 _Document uploader with parsed PDF preview, mode switcher (Single Document / Compare Contracts), and 7 capability cards marked Active._
 
 ### AI Summary — Plain Language with Clause Citations
 
-![AI Summary](public/screenshots/02-ai-summary.webp)
+![AI Summary](public/screenshots/02-ai-summary.png)
 _Streaming plain-language summary grounded in the document, with clause-level citations like [Clause 1.1] and structured sections (Purpose, Rights & Obligations, Deadlines)._
 
 ### Clause Risk Analysis
 
-![Clause Risk Analysis](public/screenshots/03-clause-risks.webp)
+![Clause Risk Analysis](public/screenshots/03-clause-risks.png)
 _Automated clause extraction with risk levels (high/medium/low), plain explanations, risk reasoning, and collapsible verbatim source text._
 
 ### Q&A with Citations
 
-![Q&A with Citations](public/screenshots/04-qa-citations.webp)
+![Q&A with Citations](public/screenshots/04-qa-citations.png)
 _Grounded Q&A — every answer includes quoted source citations and a confidence indicator, never fabricating content not in the document._
 
 ### Lawyer Preparation
 
-![Lawyer Preparation](public/screenshots/05-lawyer-prep.webp)
+![Lawyer Preparation](public/screenshots/05-lawyer-prep.png)
 _Categorized questions to ask a qualified lawyer, documents to bring, and a briefing summary for the consultation._
 
 ---
@@ -262,12 +262,6 @@ LegalSaathi is fully optimized for one-click deployment on [Vercel](https://verc
 - [x] **Day 3: Grounded Q&A with Citations & Contract Comparison Matrix** — Interactive document Q&A with exact quoted citations, side-by-side contract comparison matrix, and party favorability analysis.
 - [x] **Day 4: Lawyer Preparation, Action Checklist & Privacy-First PII Redaction** — Structured consultation questions, documents-to-bring checklist, case briefings, actionable next-steps checklist with deadlines, and zero-trust client-side PII redaction.
 - [x] **Day 5: Production Polish, Accessibility & Security Hardening** — React error boundaries (root + segment), loading skeletons, full CSP and security headers, in-memory rate limiting, 3-state dark mode toggle, next/dynamic lazy loading, and bundle analyzer.
-
-### Production Roadmap & Scalability
-
-- **Distributed Rate Limiting (Redis / Upstash / Vercel KV)**: While the current in-memory sliding window provides immediate single-instance DoS deterrence and protects AI endpoint quotas, high-scale multi-region deployments will migrate to an Upstash Redis or Vercel KV distributed store for synchronized cross-instance rate tracking.
-- **Enterprise SSO & Audit Logs**: SAML/OIDC authentication support and immutable compliance audit trails for corporate legal teams.
-- **Multi-Document Vector Indexing**: Persistent embeddings and vector search for cross-repository multi-contract portfolio discovery.
 
 ---
 
