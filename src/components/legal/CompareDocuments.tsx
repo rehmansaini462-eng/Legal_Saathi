@@ -46,7 +46,7 @@ function BenefitsBadge({
   nameA,
   nameB,
 }: {
-  party?: BenefitsParty | null;
+  party: BenefitsParty;
   nameA: string;
   nameB: string;
 }): React.JSX.Element {

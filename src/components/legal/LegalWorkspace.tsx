@@ -27,25 +27,14 @@ import {
 import dynamic from 'next/dynamic';
 import { DocumentUploader } from './DocumentUploader';
 import { DocumentPreview } from './DocumentPreview';
+import { SummaryCard } from './SummaryCard';
+import { ClauseList } from './ClauseList';
+import { AskQuestion } from './AskQuestion';
 import { SkeletonCard } from './SkeletonCard';
+import { RedactPIIPanel } from './RedactPIIPanel';
 import { redactPII } from '@/lib/utils/redact';
 
-// Lazy load heavy client components and tabs to optimize initial bundle size
-const SummaryCard = dynamic(() => import('./SummaryCard').then((mod) => mod.SummaryCard), {
-  ssr: false,
-  loading: () => <SkeletonCard lines={4} ariaLabel="Loading document summary" />,
-});
-
-const ClauseList = dynamic(() => import('./ClauseList').then((mod) => mod.ClauseList), {
-  ssr: false,
-  loading: () => <SkeletonCard lines={4} ariaLabel="Loading clause risk analysis" />,
-});
-
-const AskQuestion = dynamic(() => import('./AskQuestion').then((mod) => mod.AskQuestion), {
-  ssr: false,
-  loading: () => <SkeletonCard lines={4} ariaLabel="Loading document Q&A assistant" />,
-});
-
+// Lazy load heavy client tabs to optimize initial bundle size and boost page load efficiency
 const CompareDocuments = dynamic(
   () => import('./CompareDocuments').then((mod) => mod.CompareDocuments),
   {
@@ -66,11 +55,6 @@ const ActionChecklist = dynamic(
     loading: () => <SkeletonCard lines={4} ariaLabel="Loading action checklist tool" />,
   }
 );
-
-const RedactPIIPanel = dynamic(() => import('./RedactPIIPanel').then((mod) => mod.RedactPIIPanel), {
-  ssr: false,
-  loading: () => <SkeletonCard lines={2} ariaLabel="Loading privacy protection panel" />,
-});
 import type {
   ApiError,
   ParsedDocument,

@@ -23,15 +23,9 @@ export const ClauseItemSchema = z.object({
   riskLevel: z
     .enum(['low', 'medium', 'high'])
     .describe('Risk assessment severity level: low, medium, or high'),
-  riskReason: z
-    .string()
-    .nullable()
-    .optional()
-    .describe('Specific reason why this risk level was assigned to the clause'),
+  riskReason: z.string().describe('Specific reason why this risk level was assigned to the clause'),
   category: z
     .string()
-    .nullable()
-    .optional()
     .describe('Category of the clause, e.g. Liability, Termination, Confidentiality, Payment'),
 });
 
